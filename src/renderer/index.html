@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="sidebar">
+    <div class="sidebar-logo">
+      <div class="app-name">Signal</div>
+      <div class="app-sub">Outreach Prep</div>
+    </div>
+
+    <div class="sidebar-section">
+      <button id="sidebar-compose-btn" class="compose-nav-btn">+ Compose Email</button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Workspace</div>
+      <nav>
+        <button class="nav-btn active" data-section="dashboard-section">Dashboard</button>
+        <button class="nav-btn" data-section="roster-section">Roster</button>
+        <button class="nav-btn" data-section="groups-section">Groups</button>
+        <button class="nav-btn" data-section="projects-section">Projects</button>
+        <button class="nav-btn" data-section="templates-section">Uploads</button>
+      </nav>
+    </div>
+    <div class="sidebar-footer">Phase 3</div>
+  </div>
+
+  <div id="main">
+    <div id="topbar">
+      <div>
+        <div id="topbar-title">Dashboard</div>
+        <div id="topbar-meta">Search teachers and jump into their profile</div>
+      </div>
+    </div>
+
+    <div id="content-wrapper">
+      <div id="content">
+
+        <!-- DASHBOARD -->
+        <section id="dashboard-section" class="page">
+          <div class="card">
+            <div class="card-title">Find a Teacher</div>
+            <div class="filter-bar">
+              <input type="text" id="dashboard-search" placeholder="Search by name or school..." style="flex: 1;" />
+            </div>
+            <div id="dashboard-search-results"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Overview</div>
+            <div id="dashboard-stats" class="stats-grid"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Recent Projects</div>
+            <div id="dashboard-recent-projects"></div>
+          </div>
+
+
+          <div class="card">
+            <div class="card-title">Backup &amp; Restore</div>
+            <p class="hint">Export a backup file any time you want a safety copy. Restoring replaces everything currently in Signal with the backup's contents.</p>
+            <div class="filter-bar">
+              <button id="export-backup-btn" class="btn btn-ghost">Export Backup</button>
+              <button id="restore-backup-btn" class="btn btn-ghost">Restore from Backup</button>
+            </div>
+            <p id="backup-status" class="hint"></p>
+          </div>
+        </section>
+
+        <!-- TEACHER PROFILE -->
+        <section id="profile-section" class="page hidden">
+          <button id="profile-back-btn" class="btn btn-ghost btn-sm" style="margin-bottom: 14px;">&larr; Back</button>
+
+          <div class="card">
+            <div class="card-title">Teacher</div>
+            <div class="filter-bar">
+              <input type="text" id="profile-first-name" placeholder="First Name" />
+              <input type="text" id="profile-last-name" placeholder="Last Name" />
+              <button id="profile-save-name-btn" class="btn btn-navy btn-sm">Save Name</button>
+              <label class="rep-toggle" style="margin-left: 12px;">
+                <input type="checkbox" id="profile-rep-checkbox" />
+                District Rep
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Assignments</div>
+            <div id="profile-assignments-list"></div>
+            <button id="profile-add-assignment-btn" class="btn btn-ghost btn-sm" style="margin-top: 10px;">+ Add Assignment</button>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Cleanup</div>
+            <div id="profile-combine-actions"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Send History</div>
+            <div id="profile-history-list"></div>
+          </div>
+        </section>
+
+        <!-- COMPOSE WIZARD -->
+        <section id="wizard-section" class="page hidden">
+          <p id="wizard-step-indicator" class="hint" style="margin-bottom: 12px;"></p>
+
+          <div id="wizard-step-1" class="card wizard-step">
+            <div class="card-title">What kind of email?</div>
+            <div class="wizard-choice-row">
+              <button class="wizard-choice-btn" data-type="personalized">
+                <strong>Personalized Letter</strong>
+                <span class="hint">Fill in a letter template with each teacher's name, school, etc. One email per recipient.</span>
+              </button>
+              <button class="wizard-choice-btn" data-type="announcement">
+                <strong>Group Announcement</strong>
+                <span class="hint">One message sent to multiple recipients split across To / Cc / Bcc.</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="wizard-step-2" class="card wizard-step hidden">
+            <div class="card-title">Choose Recipients</div>
+            <div class="filter-bar">
+              <select id="wizard-saved-group-select"><option value="">-- Or pick a saved group --</option></select>
+            </div>
+            <div class="filter-bar" style="margin-top: 10px;">
+              <select id="wizard-filter-school"><option value="">All Schools</option></select>
+              <select id="wizard-filter-level"><option value="">All Levels</option></select>
+              <select id="wizard-filter-subject"><option value="">All Subjects</option></select>
+              <select id="wizard-filter-district"><option value="">All Districts</option></select>
+              <input type="text" id="wizard-filter-search" placeholder="Search name..." />
+              <label class="hint"><input type="checkbox" id="wizard-filter-reps-only" /> District Reps only</label>
+              <button id="wizard-apply-filters-btn" class="btn btn-ghost btn-sm">Apply</button>
+            </div>
+            <div class="filter-bar" style="margin-top: 10px;">
+              <button id="wizard-select-all-btn" class="btn btn-ghost btn-sm">Select All</button>
+              <span id="wizard-selected-count" class="hint"></span>
+            </div>
+            <div id="wizard-recipient-list"></div>
+            <div class="filter-bar" style="margin-top: 14px;">
+              <button class="btn btn-ghost wizard-back-btn">Back</button>
+              <button id="wizard-step2-next-btn" class="btn btn-navy">Next</button>
+              <button class="btn btn-ghost wizard-cancel-btn">Cancel</button>
+            </div>
+          </div>
+
+          <div id="wizard-step-3-personalized" class="card wizard-step hidden">
+            <div class="card-title">Choose a Letter</div>
+            <div class="filter-bar">
+              <select id="wizard-template-select"><option value="">-- Select existing template --</option></select>
+              <button id="wizard-upload-template-btn" class="btn btn-ghost btn-sm">Upload New (.docx)</button>
+            </div>
+            <p id="wizard-template-status" class="hint"></p>
+            <div id="wizard-label-map-list"></div>
+            <div class="filter-bar" style="margin-top: 14px;">
+              <button class="btn btn-ghost wizard-back-btn">Back</button>
+              <button id="wizard-step3-personalized-next-btn" class="btn btn-navy">Next</button>
+              <button class="btn btn-ghost wizard-cancel-btn">Cancel</button>
+            </div>
+          </div>
+
+          <div id="wizard-step-3-announcement" class="card wizard-step hidden">
+            <div class="card-title">Write Your Message</div>
+            <input type="text" id="wizard-subject" placeholder="Subject" style="width: 100%; padding: 7px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px;" />
+            <textarea id="wizard-body" placeholder="Message..." rows="6" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit;"></textarea>
+            <div class="card-title" style="margin-top: 16px;">Recipient Fields</div>
+            <div id="wizard-recipient-fields"></div>
+            <div class="filter-bar" style="margin-top: 14px;">
+              <button class="btn btn-ghost wizard-back-btn">Back</button>
+              <button id="wizard-step3-announcement-next-btn" class="btn btn-navy">Next</button>
+              <button class="btn btn-ghost wizard-cancel-btn">Cancel</button>
+            </div>
+          </div>
+
+          <div id="wizard-step-4-personalized" class="card wizard-step hidden">
+            <div class="card-title">Review &amp; Send</div>
+            <div class="filter-bar">
+              <label class="hint">Add to Project (optional):</label>
+              <select id="wizard-project-select-personalized"><option value="">-- No Project --</option></select>
+              <button id="wizard-open-all-btn" class="btn btn-navy">Open All in Mail Client</button>
+            </div>
+            <div id="wizard-batch-preview-list"></div>
+            <div class="filter-bar" style="margin-top: 14px;">
+              <button class="btn btn-ghost wizard-back-btn">Back</button>
+              <button id="wizard-finish-btn" class="btn btn-navy">Done</button>
+            </div>
+          </div>
+
+          <div id="wizard-step-4-announcement" class="card wizard-step hidden">
+            <div class="card-title">Review &amp; Send</div>
+            <div id="wizard-announcement-summary"></div>
+            <div class="filter-bar" style="margin-top: 12px;">
+              <label class="hint">Add to Project (optional):</label>
+              <select id="wizard-project-select-announcement"><option value="">-- No Project --</option></select>
+            </div>
+            <div class="filter-bar" style="margin-top: 12px;">
+              <button id="wizard-send-announcement-btn" class="btn btn-navy">Open in Mail Client</button>
+            </div>
+            <div class="filter-bar" style="margin-top: 14px;">
+              <button class="btn btn-ghost wizard-back-btn">Back</button>
+              <button id="wizard-finish-announcement-btn" class="btn btn-navy">Done</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ROSTER SECTION -->
+        <section id="roster-section" class="page hidden">
+          <div id="duplicates-panel" class="card hidden">
+            <div class="card-title">Possible Duplicate Teachers</div>
+            <p class="hint">Same first/last name or same email found across multiple profiles. Review and combine if they're the same person.</p>
+            <div id="duplicates-list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Teachers</div>
+            <div id="teachers-list"></div>
+          </div>
+        </section>
+
+        <!-- PROJECTS LIST -->
+        <section id="projects-section" class="page hidden">
+          <div class="card">
+            <div class="card-title">New Project</div>
+            <div class="filter-bar">
+              <input type="text" id="new-project-name" placeholder="Project name..." />
+              <input type="text" id="new-project-description" placeholder="Description (optional)..." style="flex: 1;" />
+              <button id="create-project-btn" class="btn btn-navy btn-sm">+ New Project</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Projects</div>
+            <div id="projects-list"></div>
+          </div>
+        </section>
+
+        <!-- PROJECT DETAIL -->
+        <section id="project-detail-section" class="page hidden">
+          <button id="project-back-btn" class="btn btn-ghost btn-sm" style="margin-bottom: 14px;">&larr; Back</button>
+
+          <div class="card">
+            <div class="card-title">Project</div>
+            <div class="filter-bar">
+              <input type="text" id="project-detail-name-input" placeholder="Project name" style="flex: 1;" />
+              <button id="project-save-name-btn" class="btn btn-navy btn-sm">Save</button>
+            </div>
+            <div class="filter-bar" style="margin-top: 8px;">
+              <input type="text" id="project-detail-description-input" placeholder="Description (optional)" style="flex: 1;" />
+            </div>
+            <div class="filter-bar" style="margin-top: 12px;">
+              <button id="project-toggle-status-btn" class="btn btn-ghost btn-sm">Archive</button>
+              <button id="project-delete-btn" class="btn btn-ghost btn-sm">Delete Project</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Add Person</div>
+            <div class="filter-bar">
+              <input type="text" id="project-add-search" placeholder="Search teacher to add..." style="flex: 1;" />
+            </div>
+            <div id="project-add-results"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">People</div>
+            <div id="project-members-list"></div>
+          </div>
+
+          <div id="project-person-panel" class="card hidden">
+            <div class="card-title" id="project-person-title">Person</div>
+            <div class="filter-bar">
+              <label class="hint">Status:</label>
+              <select id="project-person-status-select">
+                <option value="">No Status</option>
+                <option value="Interested">Interested</option>
+                <option value="Follow-up Needed">Follow-up Needed</option>
+                <option value="Declined">Declined</option>
+                <option value="No Response">No Response</option>
+              </select>
+              <button id="project-remove-person-btn" class="btn btn-ghost btn-sm">Remove from Project</button>
+            </div>
+
+            <div class="card-title" style="margin-top: 14px; font-size: 12px;">Notes</div>
+            <textarea id="project-new-note" placeholder="Add a note..." rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit;"></textarea>
+            <div class="filter-bar" style="margin-top: 8px;">
+              <button id="project-add-note-btn" class="btn btn-navy btn-sm">Add Note</button>
+            </div>
+            <div id="project-notes-list" style="margin-top: 10px;"></div>
+
+            <div class="card-title" style="margin-top: 14px; font-size: 12px;">Send History (this project)</div>
+            <div id="project-person-sends"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">All Sends (this project)</div>
+            <div id="project-sends-list"></div>
+          </div>
+        </section>
+
+        <!-- GROUPS SECTION -->
+        <section id="groups-section" class="page hidden">
+          <div class="card">
+            <div class="card-title">Filter Teachers</div>
+            <div class="filter-bar">
+              <select id="filter-school"><option value="">All Schools</option></select>
+              <select id="filter-level"><option value="">All Levels</option></select>
+              <select id="filter-subject"><option value="">All Subjects</option></select>
+              <select id="filter-district"><option value="">All Districts</option></select>
+              <select id="filter-group"><option value="">All Groups</option></select>
+              <input type="text" id="filter-search" placeholder="Search name..." />
+              <label class="hint"><input type="checkbox" id="filter-reps-only" /> District Reps only</label>
+              <button id="apply-filters-btn" class="btn btn-navy btn-sm">Apply</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Results</div>
+            <div class="filter-bar">
+              <button id="select-all-filtered-btn" class="btn btn-ghost btn-sm">Select All</button>
+              <button id="save-group-btn" class="btn btn-ghost btn-sm">Save as Group</button>
+              <button id="groups-send-email-btn" class="btn btn-red btn-sm hidden">Send Email</button>
+            </div>
+            <div id="filter-results"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Saved Groups</div>
+            <div class="filter-bar">
+              <button id="open-create-group-modal-btn" class="btn btn-navy btn-sm">+ Create Group</button>
+            </div>
+            <div id="saved-groups-list"></div>
+          </div>
+        </section>
+
+        <!-- CREATE GROUP MODAL -->
+        <div id="create-group-modal-overlay" class="modal-overlay hidden">
+          <div class="modal-content">
+            <div class="card-title">Create Group</div>
+            <p class="hint">Build a new group from scratch by searching and adding teachers one at a time.</p>
+            <div class="filter-bar">
+              <input type="text" id="create-group-name" placeholder="Group name..." />
+              <input type="text" id="create-group-search" placeholder="Search teacher to add..." />
+            </div>
+            <div id="create-group-search-results"></div>
+            <div class="card-title" style="margin-top: 14px; font-size: 12px;">Selected Members</div>
+            <div id="create-group-members"></div>
+            <div class="filter-bar" style="margin-top: 14px;">
+              <button id="create-group-btn" class="btn btn-navy btn-sm">Create Group</button>
+              <button id="cancel-create-group-btn" class="btn btn-ghost btn-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- UPLOADS SECTION -->
+        <section id="templates-section" class="page hidden">
+          <div class="card">
+            <div class="card-title">Import Roster</div>
+            <div class="filter-bar">
+              <button id="upload-btn" class="btn btn-navy">Upload Roster (.xlsx)</button>
+              <button id="auto-combine-btn" class="btn btn-ghost">Auto Combine All</button>
+              <button id="download-template-btn" class="btn btn-ghost">Download Info Template</button>
+              <button id="confirm-import-btn" class="btn btn-navy hidden">Import Selected</button>
+              <button id="cancel-import-btn" class="btn btn-ghost hidden">Cancel</button>
+            </div>
+            <p id="status" class="hint"></p>
+          </div>
+
+          <div id="import-preview-panel" class="card hidden">
+            <div class="card-title">Review Import</div>
+            <p id="preview-summary" class="hint"></p>
+            <div id="preview-rows"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Upload Letter</div>
+            <div class="filter-bar">
+              <button id="upload-template-btn" class="btn btn-navy">Upload Letter (.docx)</button>
+            </div>
+            <p id="template-status" class="hint"></p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Templates</div>
+            <div id="templates-list"></div>
+          </div>
+
+          <div id="label-map-panel" class="card hidden">
+            <div class="card-title">Map Labels to Roster Columns</div>
+            <p class="hint">Every bracketed label must be mapped before generating letters.</p>
+            <div id="label-map-list"></div>
+          </div>
+
+          <div id="recipient-panel" class="card hidden">
+            <div class="card-title">Select Recipients</div>
+            <div class="filter-bar">
+              <button id="select-all-recipients-btn" class="btn btn-ghost btn-sm">Select All</button>
+              <button id="clear-recipients-btn" class="btn btn-ghost btn-sm">Clear</button>
+              <button id="generate-preview-btn" class="btn btn-navy">Generate Batch Preview</button>
+            </div>
+            <div id="recipient-list"></div>
+          </div>
+
+          <div id="batch-preview-panel" class="card hidden">
+            <div class="card-title">Batch Preview</div>
+            <div class="filter-bar">
+              <button id="open-all-btn" class="btn btn-navy">Open All in Mail Client</button>
+            </div>
+            <div id="batch-preview-list"></div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

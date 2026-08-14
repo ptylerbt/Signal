@@ -1,0 +1,549 @@
+/* Base sizing is intentionally larger than typical web defaults —
+   this app is built to be easy to read and easy to click for a user
+   with a traumatic brain injury. Don't shrink these without asking. */
+html {
+  font-size: 18px;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  color: #1a1a1a;
+  background: #f4f6fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: #1F3864;
+}
+
+/* High-contrast mode (Settings > Accessibility): darker text, stronger
+   borders, and a solid background instead of the light gray page tint. */
+html[data-contrast="high"] body {
+  background: #fff;
+  color: #000;
+}
+html[data-contrast="high"] .signal-content a {
+  color: #0d2b57;
+}
+html[data-contrast="high"] .signal-topbar,
+html[data-contrast="high"] [style*="border"] {
+  border-color: #000 !important;
+}
+html[data-contrast="high"] .signal-content p,
+html[data-contrast="high"] .signal-content span,
+html[data-contrast="high"] .signal-content div {
+  color: #111 !important;
+}
+html[data-contrast="high"] .signal-content h1,
+html[data-contrast="high"] .signal-content h2,
+html[data-contrast="high"] .signal-content h3,
+html[data-contrast="high"] .signal-content h4,
+html[data-contrast="high"] .signal-content strong {
+  color: #000 !important;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+/* A clearly visible focus ring everywhere, for keyboard navigation. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #C1272D;
+  outline-offset: 2px;
+}
+
+.signal-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.signal-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: #1F3864;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+}
+
+.signal-sidebar-brand {
+  font-size: 1.6rem;
+  font-weight: 700;
+  padding: 0 20px 20px;
+  letter-spacing: 0.02em;
+}
+
+.signal-compose-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 0 16px 20px;
+  padding: 14px 16px;
+  background: #C1272D;
+  color: #fff;
+  text-decoration: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-soft-md);
+  min-height: 48px;
+  transition: background 140ms ease, box-shadow 140ms ease;
+}
+
+.signal-compose-btn:hover,
+.signal-compose-btn.active {
+  background: #a11e23;
+  color: #fff;
+  box-shadow: var(--shadow-soft-lg);
+}
+
+.signal-sidebar-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Pill-shaped nav items: the whole row is the indicator, so active/hover
+   read as a soft filled capsule rather than a hard left-edge bar. */
+.signal-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  color: #dbe3f3;
+  text-decoration: none;
+  font-size: 1.05rem;
+  font-weight: 500;
+  min-height: 48px;
+  border-radius: var(--radius-pill);
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.signal-sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.10);
+  color: #fff;
+}
+
+.signal-sidebar-link.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* High contrast mode keeps a visible outline on the active pill, since a
+   subtle translucent fill alone isn't a strong enough signal there. */
+html[data-contrast="high"] .signal-sidebar-link.active {
+  background: #fff;
+  color: #0d2b57;
+  outline: 2px solid #fff;
+}
+
+.signal-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Soft floating header bar: sits inset from the edges on the same page
+   tint as the content below it, so the user menu reads as part of the
+   page rather than a separate hard-edged strip bolted to the top. */
+.signal-topbar-wrap {
+  padding: 16px 28px 0;
+  flex-shrink: 0;
+}
+
+.signal-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 22px;
+  min-height: 64px;
+  border-radius: var(--radius-2xl);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(221, 227, 239, 0.8);
+  box-shadow: var(--shadow-soft-sm);
+}
+
+html[data-contrast="high"] .signal-topbar {
+  background: #fff;
+  border-color: #000;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.signal-topbar-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1F3864;
+}
+
+.signal-content {
+  padding: 20px 28px 28px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.signal-impersonation-banner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 20px;
+  background: #C1272D;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.signal-impersonation-stop {
+  padding: 6px 16px;
+  background: #fff;
+  color: #a11e23;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.signal-signin-link {
+  padding: 10px 22px;
+  background: #1F3864;
+  color: #fff;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: var(--shadow-soft-sm);
+}
+
+/* ---------- Responsive ----------
+   Below this width, the sidebar collapses to icons-only (labels are still
+   present for screen readers via aria-label, just visually hidden) so it
+   never crowds out the page content, and anything still too wide to fit
+   scrolls within its own box instead of forcing the whole page sideways. */
+@media (max-width: 780px) {
+  .signal-sidebar {
+    width: 76px;
+  }
+  .signal-sidebar-brand,
+  .signal-sidebar-link span,
+  .signal-compose-btn span {
+    display: none;
+  }
+  .signal-sidebar-list {
+    padding: 8px 8px 0;
+  }
+  .signal-sidebar-link,
+  .signal-compose-btn {
+    justify-content: center;
+    padding: 12px 8px;
+  }
+  .signal-compose-btn {
+    margin: 0 10px 20px;
+  }
+  .signal-content {
+    padding: 16px;
+  }
+  .signal-topbar-wrap {
+    padding: 12px 16px 0;
+  }
+  .signal-topbar {
+    padding: 10px 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .signal-topbar-title {
+    display: none;
+  }
+}
+
+.signal-scroll-x {
+  overflow-x: auto;
+}
+
+.signal-flex-wrap {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* ---------- Dashboard ---------- */
+.signal-dashboard {
+  max-width: 1180px;
+  display: flex;
+  gap: 20px;
+  /* Fixed to one screen's height on wide viewports: Recent Projects sizes
+     to its own content at top-left, Notes fills the rest of the left
+     column, and Calendar fills the entire right column. The subtracted
+     value accounts for the floating header bar + its surrounding padding. */
+  height: calc(100vh - 160px);
+}
+.signal-dashboard-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+}
+.signal-panel {
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-3xl);
+  padding: 24px;
+  background: var(--card-bg);
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+  box-shadow: var(--shadow-soft-sm);
+  overflow: auto;
+  min-height: 0;
+  min-width: 0;
+}
+.signal-panel-cap {
+  flex-shrink: 0;
+  max-height: 45%;
+}
+.signal-panel-grow {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---------- Calendar ----------
+   The panel is a fixed-height flex column; the month grid takes whatever
+   vertical space is left over and splits it across exactly six week rows.
+   That way the full month is always visible without the panel scrolling,
+   at any window height. */
+.signal-calendar-panel {
+  display: flex;
+  flex-direction: column;
+  /* `auto`, not `hidden`: in a window too short even for the minimum row
+     height below, scrolling is a far better failure mode than silently
+     clipping the last week of the month. */
+  overflow: auto;
+}
+
+.signal-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  /* One auto row for the weekday labels, then six equal week rows that
+     split the leftover height — with a floor so cells never shrink to an
+     unreadable sliver on short windows. */
+  grid-template-rows: auto repeat(6, minmax(44px, 1fr));
+  gap: 6px;
+  flex: 1;
+  /* min-content, NOT 0: with 0 the flex container could shrink the grid
+     below the height its rows actually need, and the rows would then spill
+     out and render on top of whatever followed. */
+  min-height: min-content;
+}
+
+/* The selected day's entries live in their own card below the calendar,
+   so they can never crowd or overlap the month grid. */
+.signal-calendar-detail-panel {
+  flex-shrink: 0;
+  max-height: 42%;
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  /* Stacked layout: let the calendar grow to its natural height and let
+     the PAGE scroll, rather than trapping the month inside a capped panel
+     with its own scrollbar. Overrides .signal-panel-grow's 60vh cap. */
+  /* Two classes so this beats `.signal-panel-grow { max-height: 60vh }`,
+     which is defined later in this file and would otherwise win. */
+  .signal-panel.signal-calendar-panel {
+    max-height: none;
+    overflow: visible;
+    flex: none;
+  }
+  .signal-calendar-grid {
+    /* Rows size to content here; the floor keeps cells tappable. */
+    grid-template-rows: auto repeat(6, minmax(52px, auto));
+    flex: none;
+  }
+  .signal-calendar-detail-panel {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/* Very narrow (phone) widths: tighten the grid so seven columns still fit
+   without the cells becoming too cramped to read. */
+@media (max-width: 560px) {
+  .signal-calendar-grid {
+    gap: 4px;
+    grid-template-rows: auto repeat(6, minmax(44px, auto));
+  }
+}
+
+@media (max-width: 900px) {
+  .signal-dashboard {
+    flex-direction: column;
+    height: auto;
+    max-width: 100%;
+  }
+  .signal-dashboard-col {
+    height: auto;
+  }
+  .signal-panel-cap {
+    max-height: none;
+  }
+  .signal-panel-grow {
+    flex: none;
+    max-height: 60vh;
+  }
+}
+
+/* ============================================================
+   2026 design tokens — softer, rounded aesthetic.
+   Purely additive: nothing above this line is touched, no
+   existing color/utility is removed. Opt in per-element by
+   adding these classes (or var(--...) values) where wanted;
+   nothing here is applied automatically. */
+
+:root {
+  /* Radius scale */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+  --radius-pill: 9999px;
+
+  /* Soft, diffused shadows — low-opacity, wide-spread, tinted with the
+     brand navy instead of flat black for a gentler look. */
+  --shadow-soft-sm: 0 1px 2px rgba(31, 56, 100, 0.06), 0 1px 3px rgba(31, 56, 100, 0.08);
+  --shadow-soft-md: 0 4px 16px rgba(31, 56, 100, 0.08), 0 2px 6px rgba(31, 56, 100, 0.06);
+  --shadow-soft-lg: 0 16px 40px rgba(31, 56, 100, 0.12), 0 4px 10px rgba(31, 56, 100, 0.06);
+  --shadow-soft-diffused: 0 24px 64px -12px rgba(31, 56, 100, 0.20);
+
+  /* Glassmorphic surface — border tinted to the app's own #dde3ef rather
+     than a neutral slate, so glass edges match every other border. */
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(221, 227, 239, 0.7);
+
+  /* Card surface. Exposed as variables (rather than hard-coded) because
+     inline React styles reference these too — that's what lets the
+     high-contrast override below reach styles set in JS. */
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-border: rgba(221, 227, 239, 0.6);
+  --card-blur: blur(4px);
+}
+
+html[data-contrast="high"] {
+  /* Translucency undermines contrast, so high-contrast mode gets solid
+     equivalents instead of glass — same shapes, no see-through surfaces. */
+  --glass-bg: #ffffff;
+  --glass-border: #000000;
+  --card-bg: #ffffff;
+  --card-border: #000000;
+  --card-blur: none;
+}
+
+/* Radius utilities */
+.rounded-sm  { border-radius: var(--radius-sm); }
+.rounded-md  { border-radius: var(--radius-md); }
+.rounded-lg  { border-radius: var(--radius-lg); }
+.rounded-xl  { border-radius: var(--radius-xl); }
+.rounded-2xl { border-radius: var(--radius-2xl); }
+.rounded-3xl { border-radius: var(--radius-3xl); }
+.rounded-4xl { border-radius: var(--radius-4xl); }
+.rounded-pill { border-radius: var(--radius-pill); }
+
+/* Soft, diffused shadow utilities */
+.shadow-soft-sm { box-shadow: var(--shadow-soft-sm); }
+.shadow-soft    { box-shadow: var(--shadow-soft-md); }
+.shadow-soft-lg { box-shadow: var(--shadow-soft-lg); }
+.shadow-soft-diffused { box-shadow: var(--shadow-soft-diffused); }
+
+/* Glassmorphic backdrop — equivalent to
+   bg-white/80 backdrop-blur-md border border-slate-200/60 shadow-sm */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-soft-sm);
+}
+
+/* Soft rounded content card — equivalent to
+   rounded-3xl border border-slate-200/80 bg-white/70 backdrop-blur-sm shadow-sm p-6 */
+.signal-card {
+  border-radius: var(--radius-3xl);
+  border: 1px solid rgba(221, 227, 239, 0.8);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: var(--shadow-soft-sm);
+  padding: 1.5rem;
+  margin-bottom: 20px;
+}
+
+html[data-contrast="high"] .signal-card {
+  background: #fff;
+  border-color: #000;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Pill upload button that fronts a visually-hidden <input type="file"> —
+   the input still does all the real work, this is just its label. */
+.signal-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-pill);
+  background: #1F3864;
+  color: #fff;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+}
+
+.signal-upload-btn:hover:not(:disabled) {
+  background: #16294a;
+  box-shadow: var(--shadow-soft-md);
+}
+
+.signal-upload-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.signal-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

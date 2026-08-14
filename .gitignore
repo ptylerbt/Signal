@@ -1,0 +1,9 @@
+node_modules/
+data/
+*.log
+
+# Secrets — never commit these, anywhere in the tree.
+.env
+.env.local
+.env*.local
+.next/
