@@ -19,7 +19,8 @@ export async function POST(request) {
       await client.query(
         `insert into send_records
            (owner_id, assignment_id, template_id, group_id, project_id, recipient_field, generated_at, opened_at, status, workspace_id, list_id)
-         values ($1, $2, $3, $4, $5, $6, $7, $7, 'opened_in_mail_client', $8, $9)`,
+         values ($1, $2, $3, $4, $5, $6, $7, $7, 'opened_in_mail_client', $8,
+                 (select id from lists where id = $9 and owner_id = $1))`,
         [
           userId,
           record.assignmentId,
@@ -32,6 +33,19 @@ export async function POST(request) {
           record.listId ?? null,
         ]
       );
+
+      // Sent from a list: mark the person "Emailed" there, unless she has
+      // already recorded something more specific (Replied, Said yes...).
+      if (record.listId) {
+        await client.query(
+          `update list_members m set status = 'Emailed', status_updated_at = now()
+             from teacher_assignments ta
+            where ta.id = $3 and ta.owner_id = $1
+              and m.owner_id = $1 and m.list_id = $2 and m.teacher_id = ta.teacher_id
+              and m.status is null`,
+          [userId, record.listId, record.assignmentId]
+        );
+      }
 
       if (record.projectId) {
         await client.query(

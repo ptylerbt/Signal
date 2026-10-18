@@ -1,450 +1,516 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { buildMailtoUrl, buildAnnouncementMailtoUrl } from '../../lib/mailto.js';
-import { cardStyle, titleStyle, subtitleStyle, selectStyle, inputStyle, primaryBtnStyle, ghostBtnStyle } from '../components/ui.js';
 
-const STEP_TYPE = 'type';
-const STEP_RECIPIENTS = 'recipients';
-const STEP_PERSONALIZED_TEMPLATE = 'personalized-template';
-const STEP_PERSONALIZED_REVIEW = 'personalized-review';
-const STEP_ANNOUNCEMENT_CONTENT = 'announcement-content';
-const STEP_ANNOUNCEMENT_REVIEW = 'announcement-review';
+// Write Email, as a 3-step wizard: Who → What → Check & send.
+// Nothing is ever sent from here: each step ends by opening her own email
+// app with the message ready, and she presses Send there.
+
+const STEPS = ['Who', 'What', 'Check & send'];
 
 export default function ComposePage() {
-  const [step, setStep] = useState(STEP_TYPE);
-  const [type, setType] = useState(null);
-
-  // Recipient picking
-  const [options, setOptions] = useState({ schools: [], levels: [], subjects: [], districts: [] });
-  const [groups, setGroups] = useState([]);
-  const [filters, setFilters] = useState({ school: '', level: '', subject: '', district: '', search: '', repsOnly: false });
-  const [filterResults, setFilterResults] = useState([]);
-  const [recipients, setRecipients] = useState(new Map()); // assignment_id -> row
-
-  // Personalized
-  const [templates, setTemplates] = useState([]);
-  const [templateId, setTemplateId] = useState(null);
-  const [templateName, setTemplateName] = useState('');
-  const [templateStatus, setTemplateStatus] = useState('');
-  const [batchResults, setBatchResults] = useState([]);
-
-  // Announcement
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
-  const [recipientFields, setRecipientFields] = useState(new Map()); // assignment_id -> to|cc|bcc
-
-  // Optional project link
-  const [projects, setProjects] = useState([]);
-  const [projectId, setProjectId] = useState(null);
-
-  // Signature from Settings, auto-appended to announcements
+  const [step, setStep] = useState(1);
+  const [lists, setLists] = useState(null);
   const [signature, setSignature] = useState('');
 
+  // Who
+  const [source, setSource] = useState(null); // { kind: 'list', list } | { kind: 'people' }
+  const [recipients, setRecipients] = useState([]); // [{ teacherId, assignmentId, name, email }]
+  const [picking, setPicking] = useState(false);
+
+  // What
+  const [mode, setMode] = useState(null); // 'message' | 'letter'
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [showAddresses, setShowAddresses] = useState(false);
+  const [templates, setTemplates] = useState(null);
+  const [template, setTemplate] = useState(null);
+  const [error, setError] = useState('');
+  const [working, setWorking] = useState(false);
+
+  // Check & send
+  const [letters, setLetters] = useState([]);
+  const [opened, setOpened] = useState(new Set());
+  const [messageOpened, setMessageOpened] = useState(false);
+
   useEffect(() => {
-    fetch('/api/groups/filter-options').then((r) => r.ok && r.json()).then((d) => d && setOptions(d));
-    fetch('/api/groups').then((r) => r.ok && r.json()).then((d) => d && setGroups(d));
-    fetch('/api/projects').then((r) => r.ok && r.json()).then((d) => d && setProjects(d.filter((p) => p.status !== 'archived')));
-    fetch('/api/settings').then((r) => r.ok && r.json()).then((d) => d?.defaultSignature && setSignature(d.defaultSignature));
+    fetch('/api/lists').then((r) => (r.ok ? r.json() : [])).then(setLists).catch(() => setLists([]));
+    fetch('/api/settings').then((r) => r.ok && r.json()).then((d) => d?.defaultSignature && setSignature(d.defaultSignature)).catch(() => {});
+
+    // Arrived from a list's "Email this list" button: start at step 2.
+    const listId = new URLSearchParams(window.location.search).get('list');
+    if (listId) chooseList({ id: Number(listId) });
   }, []);
 
-  useEffect(() => {
-    if (step !== STEP_RECIPIENTS) return;
-    runFilter();
-  }, [filters, step]);
+  const withEmail = recipients.filter((r) => r.email);
+  const withoutEmail = recipients.filter((r) => !r.email);
 
-  async function runFilter() {
-    const res = await fetch('/api/groups/filter', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(filters),
-    });
-    if (res.ok) setFilterResults(await res.json());
-  }
-
-  function toggleRecipient(r) {
-    setRecipients((prev) => {
-      const next = new Map(prev);
-      if (next.has(r.assignment_id)) next.delete(r.assignment_id);
-      else next.set(r.assignment_id, r);
-      return next;
-    });
-  }
-
-  function selectAllFiltered() {
-    setRecipients((prev) => {
-      const next = new Map(prev);
-      filterResults.forEach((r) => next.set(r.assignment_id, r));
-      return next;
-    });
-  }
-
-  async function addGroup(groupId) {
-    if (!groupId) return;
-    const res = await fetch(`/api/groups/${groupId}/members`);
-    if (!res.ok) return;
-    const members = await res.json();
-    setRecipients((prev) => {
-      const next = new Map(prev);
-      members.forEach((m) => next.set(m.assignment_id, m));
-      return next;
-    });
-  }
-
-  function removeRecipient(assignmentId) {
-    setRecipients((prev) => {
-      const next = new Map(prev);
-      next.delete(assignmentId);
-      return next;
-    });
-  }
-
-  function chooseType(t) {
-    setType(t);
-    setStep(STEP_RECIPIENTS);
-  }
-
-  async function proceedFromRecipients() {
-    if (recipients.size === 0) return;
-    if (type === 'personalized') {
-      const res = await fetch('/api/templates');
-      if (res.ok) setTemplates(await res.json());
-      setStep(STEP_PERSONALIZED_TEMPLATE);
-    } else {
-      const initial = new Map();
-      [...recipients.keys()].forEach((id) => initial.set(id, 'bcc'));
-      setRecipientFields(initial);
-      setStep(STEP_ANNOUNCEMENT_CONTENT);
+  async function chooseList(list) {
+    setError('');
+    try {
+      const res = await fetch(`/api/lists/${list.id}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setSource({ kind: 'list', list: data.list });
+      setRecipients(
+        data.members.map((m) => ({
+          teacherId: m.teacher_id,
+          assignmentId: m.assignment_id,
+          name: [m.first_name, m.last_name].filter(Boolean).join(' ') || '(no name)',
+          email: m.email,
+        }))
+      );
+      setPicking(false);
+      setStep(2);
+    } catch {
+      setError('That list couldn’t be opened. Please try again.');
     }
   }
 
-  function setRecipientField(assignmentId, field) {
-    setRecipientFields((prev) => new Map(prev).set(assignmentId, field));
+  function choosePeople(people) {
+    setSource({ kind: 'people' });
+    setRecipients(people);
+    setPicking(false);
+    setStep(2);
   }
 
-  async function generatePreviews() {
-    if (!templateId) {
-      setTemplateStatus('Choose a template first.');
-      return;
-    }
-    const res = await fetch(`/api/templates/${templateId}/preview`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ assignmentIds: [...recipients.keys()] }),
-    });
-    const data = await res.json();
-    if (!data.success) {
-      if (data.reason === 'unmapped_labels') {
-        setTemplateStatus(
-          `Map every label before continuing (see the Templates page): ${data.unmappedLabels.map((l) => `[${l}]`).join(', ')}`
-        );
-      } else {
-        setTemplateStatus('Could not generate letters for this template.');
+  async function chooseMode(next) {
+    setMode(next);
+    setError('');
+    if (next === 'letter' && templates === null) {
+      try {
+        const res = await fetch('/api/templates');
+        setTemplates(res.ok ? await res.json() : []);
+      } catch {
+        setTemplates([]);
       }
+    }
+  }
+
+  async function goToCheck() {
+    setError('');
+    if (withEmail.length === 0) {
+      setError('None of these people have an email address yet.');
       return;
     }
-    setTemplateStatus('');
-    setBatchResults(data.results);
-    setStep(STEP_PERSONALIZED_REVIEW);
+    if (mode === 'message') {
+      if (!subject.trim() && !body.trim()) {
+        setError('Type a subject or a message first.');
+        return;
+      }
+      setMessageOpened(false);
+      setStep(3);
+      return;
+    }
+    if (mode === 'letter') {
+      if (!template) {
+        setError('Pick a letter first.');
+        return;
+      }
+      setWorking(true);
+      try {
+        const res = await fetch(`/api/templates/${template.id}/preview`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assignmentIds: withEmail.map((r) => r.assignmentId) }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          setError(
+            data.reason === 'unmapped_labels'
+              ? 'This letter needs setting up first. Open Letters (under More) to finish it.'
+              : 'That letter couldn’t be filled in. Please try another.'
+          );
+          setWorking(false);
+          return;
+        }
+        setLetters(data.results);
+        setOpened(new Set());
+        setSubject((s) => s || template.file_name.replace(/\.docx$/i, ''));
+        setStep(3);
+      } catch {
+        setError('Something went wrong. Please try again.');
+      }
+      setWorking(false);
+      return;
+    }
+    setError('Choose “Write a message” or “Use a saved letter”.');
   }
 
-  async function openPersonalized(result) {
-    const subjectLine = (templateName || '').replace(/\.docx$/i, '');
-    const url = buildMailtoUrl(result.email, subjectLine, result.filledText);
+  const listId = source?.kind === 'list' ? source.list.id : null;
 
-    await fetch('/api/sends', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        records: [{ assignmentId: result.assignmentId, templateId, groupId: null, projectId, recipientField: 'to' }],
-      }),
-    });
-
-    window.location.href = url;
-  }
-
-  async function openAllPersonalized() {
-    for (const result of batchResults) {
-      await openPersonalized(result);
-      await new Promise((resolve) => setTimeout(resolve, 250));
+  async function recordSends(records) {
+    try {
+      await fetch('/api/sends', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records }),
+      });
+    } catch {
+      // Recording is a nice-to-have; never block opening the email.
     }
   }
 
-  function reviewAnnouncement() {
-    setStep(STEP_ANNOUNCEMENT_REVIEW);
-  }
-
-  async function sendAnnouncement() {
-    const buckets = { to: [], cc: [], bcc: [] };
-    const records = [];
-
-    for (const [assignmentId, r] of recipients) {
-      const field = recipientFields.get(assignmentId) || 'bcc';
-      if (!r.email) continue;
-      buckets[field].push(r.email);
-      records.push({ assignmentId, templateId: null, groupId: null, projectId, recipientField: field });
-    }
-
+  async function openMessage() {
+    const field = showAddresses ? 'to' : 'bcc';
+    const emails = withEmail.map((r) => r.email);
     const finalBody = signature ? `${body}\n\n${signature}` : body;
-    const url = buildAnnouncementMailtoUrl({ to: buckets.to, cc: buckets.cc, bcc: buckets.bcc, subject, body: finalBody });
-
-    await fetch('/api/sends', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ records }),
+    const url = buildAnnouncementMailtoUrl({
+      to: field === 'to' ? emails : [],
+      bcc: field === 'bcc' ? emails : [],
+      subject,
+      body: finalBody,
     });
-
+    await recordSends(withEmail.map((r) => ({ assignmentId: r.assignmentId, listId, recipientField: field })));
+    setMessageOpened(true);
     window.location.href = url;
   }
 
-  function finish() {
-    setStep(STEP_TYPE);
-    setType(null);
-    setRecipients(new Map());
-    setTemplateId(null);
-    setTemplateName('');
-    setTemplateStatus('');
-    setBatchResults([]);
-    setSubject('');
-    setBody('');
-    setRecipientFields(new Map());
-    setProjectId(null);
+  async function openLetter(letter) {
+    const url = buildMailtoUrl(letter.email, subject, letter.filledText);
+    await recordSends([{ assignmentId: letter.assignmentId, templateId: template.id, listId, recipientField: 'to' }]);
+    setOpened((prev) => new Set(prev).add(letter.assignmentId));
+    window.location.href = url;
   }
+
+  function startOver() {
+    window.location.href = '/compose';
+  }
+
+  const nextLetter = letters.find((l) => !opened.has(l.assignmentId));
 
   return (
-    <div style={{ maxWidth: 780 }}>
-      <div style={cardStyle}>
-        <h2 style={titleStyle}>Compose</h2>
-        <p style={{ fontSize: 15, color: '#666', marginTop: 0 }}>
-          Step: {stepLabel(step)}
-        </p>
-      </div>
+    <div className="signal-home signal-wizard">
+      <h1 className="signal-home-title">Write an email</h1>
+      <ol className="signal-steps" aria-label="Steps">
+        {STEPS.map((label, i) => (
+          <li key={label} className={`signal-step${step === i + 1 ? ' current' : ''}${step > i + 1 ? ' done' : ''}`} aria-current={step === i + 1 ? 'step' : undefined}>
+            <span className="signal-step-num">{step > i + 1 ? '✓' : i + 1}</span>
+            <span className="signal-step-label">{label}</span>
+          </li>
+        ))}
+      </ol>
 
-      {step === STEP_TYPE && (
-        <div style={cardStyle}>
-          <h3 style={subtitleStyle}>What are you sending?</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-            <button onClick={() => chooseType('personalized')} style={choiceBtnStyle}>
-              <strong>Personalized Letters</strong>
-              <div style={{ fontSize: 14, color: '#666', marginTop: 6 }}>Fill a template per recipient, open each in your mail client.</div>
-            </button>
-            <button onClick={() => chooseType('announcement')} style={choiceBtnStyle}>
-              <strong>Group Announcement</strong>
-              <div style={{ fontSize: 14, color: '#666', marginTop: 6 }}>One message, To/Cc/Bcc across a group.</div>
-            </button>
-          </div>
-        </div>
-      )}
+      {error && <p className="signal-modal-error" role="alert" style={{ marginBottom: 16 }}>{error}</p>}
 
-      {step === STEP_RECIPIENTS && (
-        <>
-          <div style={cardStyle}>
-            <h3 style={subtitleStyle}>Pick Recipients</h3>
-            <div style={filterBarStyle}>
-              <select value={filters.school} onChange={(e) => setFilters({ ...filters, school: e.target.value })} style={selectStyle}>
-                <option value="">All Schools</option>
-                {options.schools.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <select value={filters.level} onChange={(e) => setFilters({ ...filters, level: e.target.value })} style={selectStyle}>
-                <option value="">All Levels</option>
-                {options.levels.map((l) => <option key={l} value={l}>{l}</option>)}
-              </select>
-              <select value={filters.subject} onChange={(e) => setFilters({ ...filters, subject: e.target.value })} style={selectStyle}>
-                <option value="">All Subjects</option>
-                {options.subjects.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <select value={filters.district} onChange={(e) => setFilters({ ...filters, district: e.target.value })} style={selectStyle}>
-                <option value="">All Districts</option>
-                {options.districts.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <select onChange={(e) => addGroup(e.target.value)} value="" style={selectStyle}>
-                <option value="">-- Add a saved group --</option>
-                {groups.map((g) => <option key={g.id} value={g.id}>{g.name} ({g.member_count})</option>)}
-              </select>
-            </div>
-            <div style={{ ...filterBarStyle, marginTop: 8 }}>
-              <input
-                type="text"
-                placeholder="Search name..."
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                style={inputStyle}
-              />
-              <button onClick={selectAllFiltered} style={ghostBtnStyle}>Select All Shown</button>
-            </div>
-            <div style={{ maxHeight: 220, overflowY: 'auto', marginTop: 10, border: '1px solid var(--card-border)', borderRadius: 'var(--radius-md)' }}>
-              {filterResults.map((r) => (
-                <div key={r.assignment_id} style={resultRowStyle}>
-                  <input type="checkbox" checked={recipients.has(r.assignment_id)} onChange={() => toggleRecipient(r)} style={{ width: 20, height: 20 }} />
-                  <span>{r.first_name} {r.last_name}</span>
-                  <span>{r.school}</span>
-                  <span>{r.email}</span>
-                </div>
+      {/* ---------- Step 1: Who ---------- */}
+      {step === 1 && !picking && (
+        <section aria-labelledby="who-title">
+          <h2 id="who-title" className="signal-wizard-question">Who are you writing to?</h2>
+          {lists === null && <p className="signal-home-empty">Loading…</p>}
+          {lists && (
+            <div className="signal-choice-cards">
+              {lists.map((l) => (
+                <button key={l.id} type="button" className="signal-choice-card" onClick={() => chooseList(l)}>
+                  <span className="signal-choice-icon" aria-hidden="true">☰</span>
+                  <span className="signal-choice-text">
+                    <span className="signal-choice-title">{l.name}</span>
+                    <span className="signal-choice-sub">{l.member_count} {l.member_count === 1 ? 'person' : 'people'}</span>
+                  </span>
+                  <span className="signal-choice-arrow" aria-hidden="true">→</span>
+                </button>
               ))}
+              <button type="button" className="signal-choice-card signal-choice-card-alt" onClick={() => setPicking(true)}>
+                <span className="signal-choice-icon" aria-hidden="true">☺</span>
+                <span className="signal-choice-text">
+                  <span className="signal-choice-title">Pick people myself</span>
+                  <span className="signal-choice-sub">Tick the people you want</span>
+                </span>
+                <span className="signal-choice-arrow" aria-hidden="true">→</span>
+              </button>
             </div>
-          </div>
-
-          <div style={cardStyle}>
-            <h3 style={subtitleStyle}>Selected ({recipients.size})</h3>
-            {[...recipients.values()].map((r) => (
-              <div key={r.assignment_id} style={resultRowStyle}>
-                <span>{r.first_name} {r.last_name}</span>
-                <span>{r.email}</span>
-                <button onClick={() => removeRecipient(r.assignment_id)} style={ghostBtnStyle}>Remove</button>
-              </div>
-            ))}
-            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-              <button onClick={() => setStep(STEP_TYPE)} style={ghostBtnStyle}>Back</button>
-              <button onClick={proceedFromRecipients} disabled={recipients.size === 0} style={primaryBtnStyle}>Next</button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {step === STEP_PERSONALIZED_TEMPLATE && (
-        <div style={cardStyle}>
-          <h3 style={subtitleStyle}>Choose a Template</h3>
-          <select
-            value={templateId || ''}
-            onChange={(e) => {
-              const id = e.target.value ? Number(e.target.value) : null;
-              setTemplateId(id);
-              const t = templates.find((x) => x.id === id);
-              setTemplateName(t ? t.file_name : '');
-            }}
-            style={{ ...selectStyle, width: '100%', marginBottom: 10 }}
-          >
-            <option value="">-- Select a template --</option>
-            {templates.map((t) => <option key={t.id} value={t.id}>{t.file_name}</option>)}
-          </select>
-          {templates.length === 0 && (
-            <p style={{ fontSize: 15, color: '#666' }}>No templates yet — upload one on the Templates page first.</p>
           )}
-          {templateStatus && <p style={{ fontSize: 15, color: '#a33' }}>{templateStatus}</p>}
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <button onClick={() => setStep(STEP_RECIPIENTS)} style={ghostBtnStyle}>Back</button>
-            <button onClick={generatePreviews} style={primaryBtnStyle}>Generate Letters</button>
-          </div>
-        </div>
+          {lists && lists.length === 0 && (
+            <p className="signal-home-sub" style={{ marginTop: 14 }}>
+              Tip: make a <a href="/lists">list</a> for groups you email often, so next time it’s one click.
+            </p>
+          )}
+        </section>
       )}
 
-      {step === STEP_PERSONALIZED_REVIEW && (
-        <div style={cardStyle}>
-          <h3 style={subtitleStyle}>Review &amp; Send ({batchResults.length})</h3>
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 15, color: '#555' }}>
-              Link to project (optional):{' '}
-              <select value={projectId || ''} onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)} style={selectStyle}>
-                <option value="">— None —</option>
-                {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </label>
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <button onClick={openAllPersonalized} style={primaryBtnStyle}>Open All in Mail Client</button>
-            <button onClick={finish} style={ghostBtnStyle}>Finish</button>
-          </div>
-          <div style={{ maxHeight: 420, overflowY: 'auto' }}>
-            {batchResults.map((result) => (
-              <div key={result.assignmentId} style={letterCardStyle}>
-                <strong>{result.name}</strong> — {result.email}
-                <pre style={preStyle}>{result.filledText}</pre>
-                <button onClick={() => openPersonalized(result)} style={ghostBtnStyle}>Open in Mail Client</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {step === 1 && picking && <PeoplePicker onBack={() => setPicking(false)} onDone={choosePeople} />}
 
-      {step === STEP_ANNOUNCEMENT_CONTENT && (
-        <>
-          <div style={cardStyle}>
-            <h3 style={subtitleStyle}>Message</h3>
-            <input
-              type="text"
-              placeholder="Subject..."
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              style={{ ...inputStyle, width: '100%', marginBottom: 8 }}
-            />
-            <textarea
-              placeholder="Body..."
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={8}
-              style={{ ...inputStyle, width: '100%', fontFamily: 'inherit' }}
-            />
+      {/* ---------- Step 2: What ---------- */}
+      {step === 2 && (
+        <section aria-labelledby="what-title">
+          <WhoSummary source={source} withEmail={withEmail} withoutEmail={withoutEmail} onChange={() => setStep(1)} />
+
+          <h2 id="what-title" className="signal-wizard-question">What do you want to send?</h2>
+          <div className="signal-choice-cards signal-choice-two">
+            <button type="button" className={`signal-choice-card${mode === 'message' ? ' selected' : ''}`} onClick={() => chooseMode('message')} aria-pressed={mode === 'message'}>
+              <span className="signal-choice-icon" aria-hidden="true">✎</span>
+              <span className="signal-choice-text">
+                <span className="signal-choice-title">Write a message</span>
+                <span className="signal-choice-sub">One email to everyone</span>
+              </span>
+            </button>
+            <button type="button" className={`signal-choice-card${mode === 'letter' ? ' selected' : ''}`} onClick={() => chooseMode('letter')} aria-pressed={mode === 'letter'}>
+              <span className="signal-choice-icon" aria-hidden="true">📄</span>
+              <span className="signal-choice-text">
+                <span className="signal-choice-title">Use a saved letter</span>
+                <span className="signal-choice-sub">Each person gets their own copy with their name filled in</span>
+              </span>
+            </button>
           </div>
-          <div style={cardStyle}>
-            <h3 style={subtitleStyle}>Recipient Fields</h3>
-            {[...recipients.values()].map((r) => (
-              <div key={r.assignment_id} style={resultRowStyle}>
-                <span>{r.first_name} {r.last_name}</span>
-                <span>{r.email}</span>
-                <select
-                  value={recipientFields.get(r.assignment_id) || 'bcc'}
-                  onChange={(e) => setRecipientField(r.assignment_id, e.target.value)}
-                  style={selectStyle}
-                >
-                  <option value="to">To</option>
-                  <option value="cc">Cc</option>
-                  <option value="bcc">Bcc</option>
-                </select>
-              </div>
-            ))}
-            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-              <button onClick={() => setStep(STEP_RECIPIENTS)} style={ghostBtnStyle}>Back</button>
-              <button onClick={reviewAnnouncement} style={primaryBtnStyle}>Review</button>
+
+          {mode === 'message' && (
+            <div className="signal-wizard-panel">
+              <label className="signal-field-label" htmlFor="c-subject">Subject</label>
+              <input id="c-subject" className="signal-big-input" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Rehearsal moved to Thursday" />
+              <label className="signal-field-label" htmlFor="c-body">Message</label>
+              <textarea id="c-body" className="signal-notes-input signal-message-input" rows={8} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Type your message…" />
+              {signature && <p className="signal-home-sub">Your signature from Settings will be added at the end.</p>}
+              <label className="signal-check-row">
+                <input type="checkbox" checked={showAddresses} onChange={(e) => setShowAddresses(e.target.checked)} />
+                <span>
+                  Let everyone see who else got this email
+                  <span className="signal-check-sub">Leave this off to keep everyone’s email address private (recommended).</span>
+                </span>
+              </label>
             </div>
+          )}
+
+          {mode === 'letter' && (
+            <div className="signal-wizard-panel">
+              {templates === null && <p className="signal-home-sub">Loading your letters…</p>}
+              {templates && templates.length === 0 && (
+                <p className="signal-home-empty">
+                  You don’t have any saved letters yet. Add one on the <a href="/templates">Letters</a> page (under More), or choose “Write a message” instead.
+                </p>
+              )}
+              {templates && templates.length > 0 && (
+                <div className="signal-choice-cards">
+                  {templates.map((t) => {
+                    const needsSetup = t.unmapped_count > 0;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className={`signal-choice-card${template?.id === t.id ? ' selected' : ''}${needsSetup ? ' disabled' : ''}`}
+                        onClick={() => !needsSetup && setTemplate(t)}
+                        aria-pressed={template?.id === t.id}
+                        aria-disabled={needsSetup}
+                      >
+                        <span className="signal-choice-icon" aria-hidden="true">📄</span>
+                        <span className="signal-choice-text">
+                          <span className="signal-choice-title">{t.file_name.replace(/\.docx$/i, '')}</span>
+                          <span className="signal-choice-sub">
+                            {needsSetup ? 'Needs setting up on the Letters page first' : `Fills in ${(t.detected_labels_json || []).map((l) => `[${l}]`).join(' ') || 'nothing — same for everyone'}`}
+                          </span>
+                        </span>
+                        {template?.id === t.id && <span className="signal-choice-arrow" aria-label="Selected">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="signal-wizard-nav">
+            <button type="button" className="signal-btn-ghost" onClick={() => setStep(1)}>← Back</button>
+            <button type="button" className="signal-btn-primary signal-btn-next" onClick={goToCheck} disabled={!mode || working}>
+              {working ? 'Getting letters ready…' : 'Next: check it →'}
+            </button>
           </div>
-        </>
+        </section>
       )}
 
-      {step === STEP_ANNOUNCEMENT_REVIEW && (
-        <div style={cardStyle}>
-          <h3 style={subtitleStyle}>Review &amp; Send</h3>
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 15, color: '#555' }}>
-              Link to project (optional):{' '}
-              <select value={projectId || ''} onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)} style={selectStyle}>
-                <option value="">— None —</option>
-                {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </label>
+      {/* ---------- Step 3: Check & send (message) ---------- */}
+      {step === 3 && mode === 'message' && (
+        <section aria-labelledby="check-title">
+          <h2 id="check-title" className="signal-wizard-question">{messageOpened ? 'Your email is ready' : 'Check your email'}</h2>
+          {!messageOpened ? (
+            <>
+              <div className="signal-email-preview">
+                <div className="signal-email-line"><span>To</span><strong>{withEmail.length} {withEmail.length === 1 ? 'person' : 'people'}{source?.kind === 'list' ? ` on “${source.list.name}”` : ''}{showAddresses ? '' : ' (addresses kept private)'}</strong></div>
+                <div className="signal-email-line"><span>Subject</span><strong>{subject || '(no subject)'}</strong></div>
+                <pre className="signal-email-body">{signature ? `${body}\n\n${signature}` : body}</pre>
+              </div>
+              {withoutEmail.length > 0 && (
+                <p className="signal-home-sub">{withoutEmail.length} {withoutEmail.length === 1 ? 'person has' : 'people have'} no email and will be skipped: {withoutEmail.map((r) => r.name).join(', ')}.</p>
+              )}
+              <div className="signal-wizard-nav">
+                <button type="button" className="signal-btn-ghost" onClick={() => setStep(2)}>← Back to change it</button>
+                <button type="button" className="signal-btn-email signal-btn-next" onClick={openMessage}>✉ Open in my email app</button>
+              </div>
+            </>
+          ) : (
+            <DoneBox onAgain={startOver} onReopen={openMessage} text="Your email app should now be open with the message ready. Check it, then press Send there." />
+          )}
+        </section>
+      )}
+
+      {/* ---------- Step 3: Check & send (letters) ---------- */}
+      {step === 3 && mode === 'letter' && (
+        <section aria-labelledby="check-letters-title">
+          <h2 id="check-letters-title" className="signal-wizard-question">
+            {nextLetter ? `Open each email (${opened.size} of ${letters.length} done)` : 'All emails are ready'}
+          </h2>
+          <div className="signal-progress" aria-hidden="true">
+            <div className="signal-progress-fill" style={{ width: `${letters.length ? (opened.size / letters.length) * 100 : 0}%` }} />
           </div>
-          <p><strong>Subject:</strong> {subject || '(none)'}</p>
-          <pre style={preStyle}>{signature ? `${body}\n\n${signature}` : body}</pre>
-          {signature && <p style={{ fontSize: 13, color: '#888', marginTop: -6 }}>Your Compose signature (set in Settings) is appended automatically.</p>}
-          <p style={{ fontSize: 15, color: '#666' }}>
-            To: {[...recipientFields.values()].filter((f) => f === 'to').length} ·
-            {' '}Cc: {[...recipientFields.values()].filter((f) => f === 'cc').length} ·
-            {' '}Bcc: {[...recipientFields.values()].filter((f) => f === 'bcc').length}
-          </p>
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <button onClick={() => setStep(STEP_ANNOUNCEMENT_CONTENT)} style={ghostBtnStyle}>Back</button>
-            <button onClick={sendAnnouncement} style={primaryBtnStyle}>Open in Mail Client</button>
-            <button onClick={finish} style={ghostBtnStyle}>Finish</button>
-          </div>
-        </div>
+
+          <label className="signal-field-label" htmlFor="l-subject">Subject (same for everyone)</label>
+          <input id="l-subject" className="signal-big-input" value={subject} onChange={(e) => setSubject(e.target.value)} />
+
+          {nextLetter ? (
+            <div className="signal-next-box">
+              <p className="signal-home-sub">Press the button, check the email in your email app, press Send there, then come back here for the next one.</p>
+              <button type="button" className="signal-btn-email signal-btn-next" onClick={() => openLetter(nextLetter)}>
+                ✉ Open email to {nextLetter.name || nextLetter.email}
+              </button>
+            </div>
+          ) : (
+            <DoneBox onAgain={startOver} text={`All ${letters.length} emails have been opened in your email app. Make sure you pressed Send on each one.`} />
+          )}
+
+          {withoutEmail.length > 0 && (
+            <p className="signal-home-sub">Skipped (no email): {withoutEmail.map((r) => r.name).join(', ')}.</p>
+          )}
+
+          <ul className="signal-letter-list">
+            {letters.map((l) => (
+              <li key={l.assignmentId} className={`signal-letter-card${opened.has(l.assignmentId) ? ' opened' : ''}`}>
+                <div className="signal-letter-head">
+                  <span>
+                    <span className="signal-person-name">{opened.has(l.assignmentId) ? '✓ ' : ''}{l.name}</span>
+                    <span className="signal-person-meta">{l.email}</span>
+                  </span>
+                  <button type="button" className="signal-btn-ghost signal-btn-small" onClick={() => openLetter(l)}>
+                    {opened.has(l.assignmentId) ? 'Open again' : 'Open this one'}
+                  </button>
+                </div>
+                <details>
+                  <summary>Show the letter</summary>
+                  <pre className="signal-email-body">{l.filledText}</pre>
+                </details>
+              </li>
+            ))}
+          </ul>
+
+          {nextLetter && (
+            <div className="signal-wizard-nav">
+              <button type="button" className="signal-btn-ghost" onClick={() => setStep(2)}>← Back</button>
+            </div>
+          )}
+        </section>
       )}
     </div>
   );
 }
 
-function stepLabel(step) {
-  switch (step) {
-    case STEP_TYPE: return '1 of 4 — Type';
-    case STEP_RECIPIENTS: return '2 of 4 — Recipients';
-    case STEP_PERSONALIZED_TEMPLATE: return '3 of 4 — Template';
-    case STEP_PERSONALIZED_REVIEW: return '4 of 4 — Review & Send';
-    case STEP_ANNOUNCEMENT_CONTENT: return '3 of 4 — Message';
-    case STEP_ANNOUNCEMENT_REVIEW: return '4 of 4 — Review & Send';
-    default: return '';
-  }
+function WhoSummary({ source, withEmail, withoutEmail, onChange }) {
+  const label = source?.kind === 'list' ? `“${source.list.name}”` : 'people you picked';
+  return (
+    <div className="signal-who-summary">
+      <span>
+        <span className="signal-who-label">Writing to</span>
+        <strong>{label}</strong> · {withEmail.length} {withEmail.length === 1 ? 'person' : 'people'}
+        {withoutEmail.length > 0 && <span className="signal-who-warn"> ({withoutEmail.length} without an email will be skipped)</span>}
+      </span>
+      <button type="button" className="signal-link-btn" onClick={onChange}>Change</button>
+    </div>
+  );
 }
 
-const filterBarStyle = { display: 'flex', gap: 10, flexWrap: 'wrap' };
-const choiceBtnStyle = { flex: '1 1 240px', textAlign: 'left', padding: 20, border: '1px solid var(--card-border)', borderRadius: 'var(--radius-2xl)', background: '#fff', cursor: 'pointer', fontSize: 16 };
-const resultRowStyle = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid #f2f2f2', fontSize: 15 };
-const letterCardStyle = { border: '1px solid var(--card-border)', borderRadius: 'var(--radius-lg)', padding: 16, marginBottom: 12, fontSize: 15 };
-const preStyle = { whiteSpace: 'pre-wrap', background: '#f7f9fc', border: '1px solid #eef1f7', borderRadius: 'var(--radius-md)', padding: 12, fontSize: 14.5, margin: '10px 0' };
+function DoneBox({ text, onAgain, onReopen }) {
+  return (
+    <div className="signal-empty-big signal-done-box">
+      <p className="signal-empty-big-title">✓ Done</p>
+      <p className="signal-home-sub">{text}</p>
+      <div className="signal-people-actions" style={{ justifyContent: 'center', marginTop: 16 }}>
+        <a href="/" className="signal-btn-primary signal-btn-link">Back to Home</a>
+        <button type="button" className="signal-btn-ghost" onClick={onAgain}>Write another email</button>
+        {onReopen && <button type="button" className="signal-btn-ghost" onClick={onReopen}>Open it again</button>}
+      </div>
+    </div>
+  );
+}
+
+function PeoplePicker({ onBack, onDone }) {
+  const [people, setPeople] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    fetch('/api/people')
+      .then((r) => (r.ok ? r.json() : { people: [] }))
+      .then((d) => setPeople(d.people))
+      .catch(() => setPeople([]));
+  }, []);
+
+  const shown = useMemo(() => {
+    if (!people) return [];
+    const q = search.trim().toLowerCase();
+    if (!q) return people;
+    return people.filter((p) =>
+      [p.first_name, p.last_name, ...p.assignments.flatMap((a) => [a.email, a.subject, a.school])]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [people, search]);
+
+  function toggle(id) {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function done() {
+    const chosen = people
+      .filter((p) => selected.has(p.id))
+      .map((p) => {
+        const a = p.assignments.find((x) => x.email) || p.assignments[0];
+        return {
+          teacherId: p.id,
+          assignmentId: a?.id,
+          name: [p.first_name, p.last_name].filter(Boolean).join(' ') || '(no name)',
+          email: a?.email || null,
+        };
+      });
+    onDone(chosen);
+  }
+
+  return (
+    <section aria-labelledby="pick-people-title">
+      <h2 id="pick-people-title" className="signal-wizard-question">Tick the people you want</h2>
+      {people === null && <p className="signal-home-empty">Loading…</p>}
+      {people && people.length === 0 && (
+        <p className="signal-home-empty">There’s no one in this workspace yet. Add people on the <a href="/people">People</a> page first.</p>
+      )}
+      {people && people.length > 0 && (
+        <>
+          <input className="signal-big-input signal-search" placeholder="Find someone…" aria-label="Find someone" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="signal-pick-actions">
+            <button type="button" className="signal-link-btn" onClick={() => setSelected(new Set([...selected, ...shown.map((p) => p.id)]))}>Tick all {shown.length}</button>
+            {selected.size > 0 && <button type="button" className="signal-link-btn" onClick={() => setSelected(new Set())}>Untick all</button>}
+          </div>
+          <ul className="signal-pick-list signal-pick-list-page">
+            {shown.map((p) => (
+              <li key={p.id}>
+                <label className="signal-import-row">
+                  <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} />
+                  <span className="signal-import-name">{[p.first_name, p.last_name].filter(Boolean).join(' ') || '(no name)'}</span>
+                  <span className="signal-import-meta">{[p.assignments[0]?.email || 'No email', p.assignments[0]?.subject].filter(Boolean).join(' · ')}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <div className="signal-wizard-nav">
+        <button type="button" className="signal-btn-ghost" onClick={onBack}>← Back</button>
+        <button type="button" className="signal-btn-primary signal-btn-next" onClick={done} disabled={selected.size === 0}>
+          {selected.size === 0 ? 'Next →' : `Next: ${selected.size} ${selected.size === 1 ? 'person' : 'people'} →`}
+        </button>
+      </div>
+    </section>
+  );
+}

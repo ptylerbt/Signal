@@ -10,7 +10,14 @@ export async function GET() {
 
   const templates = await withActingClient(ctx, async (client) => {
     const { rows } = await client.query(
-      'select id, file_name, uploaded_at, detected_labels_json from templates where owner_id = $1 order by id desc',
+      // unmapped_count > 0 means some [Label] isn't linked to a field yet, so
+      // the letter can't be filled in until it's set up on the Letters page.
+      `select t.id, t.file_name, t.uploaded_at, t.detected_labels_json,
+              (select count(*)::int from label_maps lm
+                where lm.template_id = t.id and lm.matched_column is null) as unmapped_count
+         from templates t
+        where t.owner_id = $1 and t.deleted_at is null
+        order by t.id desc`,
       [userId]
     );
     return rows;
