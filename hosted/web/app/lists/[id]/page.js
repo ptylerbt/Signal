@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal.js';
 import AddPersonModal from '../../components/AddPersonModal.js';
 import { useUndoBar } from '../../components/UndoBar.js';
+import HelpBubble from '../../components/HelpBubble.js';
 
 // Kept in sync with LIST_STATUSES in lib/lists.js.
 const STATUSES = ['', 'Emailed', 'Replied', 'Said yes', 'Said no', 'No reply'];
@@ -174,7 +175,8 @@ export default function ListPage({ params }) {
       <section className="signal-home-section" aria-labelledby="members-title">
         <div className="signal-home-section-head">
           <h2 id="members-title" className="signal-home-section-title">
-            {members.length} {members.length === 1 ? 'person' : 'people'} on this list
+            {members.length} {members.length === 1 ? 'person' : 'people'} on this list{' '}
+            <HelpBubble text="Use the box next to each name to keep track of who replied. People you email from here are marked Emailed for you." />
           </h2>
           {Object.keys(counts).length > 0 && (
             <div className="signal-chip-row">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useUndoBar, undoRosterSnapshot } from '../../components/UndoBar.js';
+import HelpBubble from '../../components/HelpBubble.js';
 
 const BLANK = { email: '', subject: '', school: '', level: '' };
 
@@ -171,7 +172,9 @@ export default function PersonPage({ params }) {
       </header>
 
       <section className="signal-home-section" aria-labelledby="details-title">
-        <h2 id="details-title" className="signal-home-section-title">Contact details</h2>
+        <h2 id="details-title" className="signal-home-section-title">
+          Contact details <HelpBubble text="Their email and what they do. If someone has two jobs or two emails, add another box for each." />
+        </h2>
         <div className="signal-detail-cards">
           {assignments.map((a) =>
             editingId === a.id ? (
@@ -203,7 +206,9 @@ export default function PersonPage({ params }) {
       </section>
 
       <section className="signal-home-section" aria-labelledby="ws-title">
-        <h2 id="ws-title" className="signal-home-section-title">Workspaces</h2>
+        <h2 id="ws-title" className="signal-home-section-title">
+          Workspaces <HelpBubble text="The groups this person belongs to. They are the same person everywhere, so changing their email here changes it in every workspace." />
+        </h2>
         <div className="signal-chip-row">
           {memberOf.map((w) => (
             <span key={w.id} className="signal-chip signal-chip-on">{w.emoji} {w.name}</span>

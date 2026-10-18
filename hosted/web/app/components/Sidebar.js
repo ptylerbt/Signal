@@ -15,7 +15,13 @@ const MORE_ITEMS = [
   { href: '/templates', label: 'Letters', icon: IconDoc },
   { href: '/notes', label: 'Notes', icon: IconNote },
   { href: '/calendar', label: 'Calendar', icon: IconCalendar },
+  { href: '/trash', label: 'Trash', icon: IconTrash },
   { href: '/settings', label: 'Settings', icon: IconSettings },
+];
+
+// Only shown when "Show advanced tools" is switched on in Settings.
+const ADVANCED_ITEMS = [
+  { href: '/duplicates', label: 'Find duplicates', icon: IconDuplicates },
   { href: '/backup', label: 'Backup', icon: IconBackup },
 ];
 
@@ -29,13 +35,24 @@ export default function Sidebar() {
   const pathname = usePathname();
   const composeActive = pathname.startsWith('/compose');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
-    fetch('/api/me').then((r) => r.ok && r.json()).then((d) => d && setIsAdmin(d.isAdmin));
+    fetch('/api/me')
+      .then((r) => r.ok && r.json())
+      .then((d) => {
+        if (!d) return;
+        setIsAdmin(d.isAdmin);
+        setShowAdvanced(d.showAdvanced);
+      });
   }, []);
 
-  const moreItems = isAdmin ? [...MORE_ITEMS, { href: '/admin', label: 'Admin', icon: IconAdmin }] : MORE_ITEMS;
+  const moreItems = [
+    ...MORE_ITEMS,
+    ...(showAdvanced ? ADVANCED_ITEMS : []),
+    ...(isAdmin ? [{ href: '/admin', label: 'Admin', icon: IconAdmin }] : []),
+  ];
   const onMorePage = moreItems.some((item) => isActive(pathname, item.href));
 
   // "More" stays open if she's on one of its pages, or if she left it open last time.
@@ -207,6 +224,24 @@ function IconCalendar() {
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="5" width="18" height="16" rx="2" />
       <path d="M3 10h18M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 7h16M9 7V4h6v3" />
+      <path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+function IconDuplicates() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="8" cy="9" r="3.5" />
+      <circle cx="16" cy="9" r="3.5" />
+      <path d="M2.5 20c0-3 2.5-5.5 5.5-5.5M21.5 20c0-3-2.5-5.5-5.5-5.5" />
     </svg>
   );
 }

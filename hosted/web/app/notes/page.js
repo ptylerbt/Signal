@@ -1,147 +1,156 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { cardStyle, titleStyle, inputStyle, selectStyle, primaryBtnStyle, ghostBtnStyle, chipGrayStyle, chipBlueStyle } from '../components/ui.js';
+import { useEffect, useMemo, useState } from 'react';
 import DetailOverlay from '../components/DetailOverlay.js';
+import HelpBubble from '../components/HelpBubble.js';
+import { useUndoBar } from '../components/UndoBar.js';
 
 export default function NotesPage() {
+  const [notes, setNotes] = useState(null);
+  const [lists, setLists] = useState([]);
+  const [people, setPeople] = useState([]);
   const [detailItem, setDetailItem] = useState(null);
-  const [notes, setNotes] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [teachers, setTeachers] = useState([]);
-
   const [noteText, setNoteText] = useState('');
-  const [projectId, setProjectId] = useState('');
-  const [teacherSearch, setTeacherSearch] = useState('');
-  const [teacherId, setTeacherId] = useState('');
+  const [listId, setListId] = useState('');
+  const [personSearch, setPersonSearch] = useState('');
+  const [person, setPerson] = useState(null);
+  const [message, setMessage] = useState('');
+  const undo = useUndoBar();
 
-  async function loadAll() {
-    const [notesRes, projectsRes, teachersRes] = await Promise.all([
-      fetch('/api/notes'),
-      fetch('/api/projects'),
-      fetch('/api/teachers'),
-    ]);
-    if (notesRes.ok) setNotes(await notesRes.json());
-    if (projectsRes.ok) setProjects(await projectsRes.json());
-    if (teachersRes.ok) setTeachers(await teachersRes.json());
+  async function load() {
+    try {
+      const [n, l, p] = await Promise.all([fetch('/api/notes'), fetch('/api/lists'), fetch('/api/people')]);
+      setNotes(n.ok ? await n.json() : []);
+      if (l.ok) setLists(await l.json());
+      if (p.ok) setPeople((await p.json()).people);
+    } catch {
+      setNotes([]);
+    }
   }
 
   useEffect(() => {
-    loadAll();
+    load();
   }, []);
 
-  async function addNote() {
-    if (!noteText.trim()) return;
+  const matches = useMemo(() => {
+    const q = personSearch.trim().toLowerCase();
+    if (!q) return [];
+    return people.filter((p) => `${p.first_name ?? ''} ${p.last_name ?? ''}`.toLowerCase().includes(q)).slice(0, 8);
+  }, [people, personSearch]);
+
+  async function save() {
+    if (!noteText.trim()) {
+      setMessage('Type something first, then press Save note.');
+      return;
+    }
     await fetch('/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        noteText: noteText.trim(),
-        projectId: projectId ? Number(projectId) : null,
-        teacherId: teacherId ? Number(teacherId) : null,
-      }),
+      body: JSON.stringify({ noteText: noteText.trim(), listId: listId ? Number(listId) : null, teacherId: person?.id ?? null }),
     });
     setNoteText('');
-    setProjectId('');
-    setTeacherId('');
-    setTeacherSearch('');
-    await loadAll();
+    setListId('');
+    setPerson(null);
+    setPersonSearch('');
+    setMessage('Saved ✓');
+    setTimeout(() => setMessage(''), 2500);
+    await load();
   }
 
-  async function deleteNote(id) {
-    await fetch(`/api/notes/${id}`, { method: 'DELETE' });
-    await loadAll();
+  async function remove(note) {
+    await fetch(`/api/notes/${note.id}`, { method: 'DELETE' });
+    undo.show('Note moved to Trash', async () => {
+      await fetch('/api/trash', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'note', id: note.id }),
+      });
+      await load();
+    });
+    await load();
   }
-
-  const teacherMatches = teacherSearch.trim()
-    ? teachers.filter((t) => `${t.first_name ?? ''} ${t.last_name ?? ''}`.toLowerCase().includes(teacherSearch.trim().toLowerCase()))
-    : [];
-  const selectedTeacher = teachers.find((t) => String(t.id) === String(teacherId));
 
   return (
-    <div style={{ maxWidth: 820 }}>
-      <div style={cardStyle}>
-        <h2 style={titleStyle}>Add a Note</h2>
-        <textarea
-          placeholder="Write a note..."
-          value={noteText}
-          onChange={(e) => setNoteText(e.target.value)}
-          rows={4}
-          style={{ ...inputStyle, width: '100%', fontFamily: 'inherit', marginBottom: 10 }}
-        />
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
-          <label style={{ fontSize: 14, color: '#444' }}>
-            Link to project (optional):{' '}
-            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} style={selectStyle}>
-              <option value="">— None —</option>
-              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </label>
+    <div className="signal-home">
+      <header className="signal-home-header">
+        <div className="signal-title-row">
+          <h1 className="signal-home-title">Notes</h1>
+          <HelpBubble text="Write down anything you want to remember. You can link a note to a list or a person so it shows up there too." />
+        </div>
+        <p className="signal-home-sub">Notes for this workspace. You can also write notes on Home, on a list, or on someone’s page.</p>
+      </header>
 
-          <div>
-            <label style={{ fontSize: 14, color: '#444' }}>Link to teacher (optional):</label>
-            {selectedTeacher ? (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 6 }}>
-                <span style={chipBlueStyle}>{selectedTeacher.first_name} {selectedTeacher.last_name}</span>
-                <button onClick={() => { setTeacherId(''); setTeacherSearch(''); }} style={ghostBtnStyle}>Clear</button>
-              </div>
-            ) : (
-              <input
-                type="text"
-                placeholder="Search teacher by name..."
-                value={teacherSearch}
-                onChange={(e) => setTeacherSearch(e.target.value)}
-                style={{ ...inputStyle, marginLeft: 6 }}
-              />
-            )}
-            {!selectedTeacher && teacherMatches.length > 0 && (
-              <div style={{ border: '1px solid var(--card-border)', borderRadius: 'var(--radius-md)', marginTop: 6, maxHeight: 140, overflowY: 'auto' }}>
-                {teacherMatches.slice(0, 10).map((t) => (
-                  <div key={t.id} style={teacherMatchRowStyle} onClick={() => { setTeacherId(String(t.id)); setTeacherSearch(''); }}>
-                    {t.first_name} {t.last_name}
-                  </div>
-                ))}
-              </div>
-            )}
+      <section className="signal-home-section">
+        <div className="signal-notes-box">
+          <label htmlFor="notes-new" className="signal-visually-hidden">Write a note</label>
+          <textarea id="notes-new" className="signal-notes-input" rows={4} placeholder="Write a note…" value={noteText} onChange={(e) => { setNoteText(e.target.value); if (message) setMessage(''); }} />
+
+          <div className="signal-form-row" style={{ marginTop: 6 }}>
+            <div>
+              <label className="signal-field-label" htmlFor="notes-list">About a list (optional)</label>
+              <select id="notes-list" className="signal-big-input" value={listId} onChange={(e) => setListId(e.target.value)}>
+                <option value="">— No list —</option>
+                {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="signal-field-label" htmlFor="notes-person">About a person (optional)</label>
+              {person ? (
+                <div className="signal-chip-row">
+                  <span className="signal-chip signal-chip-on">{[person.first_name, person.last_name].filter(Boolean).join(' ')}</span>
+                  <button type="button" className="signal-link-btn" onClick={() => setPerson(null)}>Change</button>
+                </div>
+              ) : (
+                <>
+                  <input id="notes-person" className="signal-big-input" placeholder="Type a name…" value={personSearch} onChange={(e) => setPersonSearch(e.target.value)} autoComplete="off" />
+                  {matches.length > 0 && (
+                    <ul className="signal-suggest-list">
+                      {matches.map((p) => (
+                        <li key={p.id}>
+                          <button type="button" className="signal-suggest-item" onClick={() => { setPerson(p); setPersonSearch(''); }}>
+                            {[p.first_name, p.last_name].filter(Boolean).join(' ')}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="signal-notes-actions">
+            <button type="button" className="signal-btn-primary" onClick={save}>Save note</button>
+            {message && <span className="signal-notes-message" role="status">{message}</span>}
           </div>
         </div>
-        <button onClick={addNote} style={primaryBtnStyle}>Add Note</button>
-      </div>
+      </section>
 
-      <div style={cardStyle}>
-        <h2 style={titleStyle}>All Notes ({notes.length})</h2>
-        {notes.length === 0 && <p style={{ color: '#666' }}>No notes yet.</p>}
-        {notes.map((n) => (
-          <div key={n.id} style={noteItemStyle}>
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => setDetailItem({ ...n, kind: 'note' })}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailItem({ ...n, kind: 'note' }); } }}
-              style={{ fontSize: 15, cursor: 'pointer' }}
-            >
-              {n.note_text}
-            </div>
-            <div style={{ fontSize: 14, color: '#888', display: 'flex', gap: 12, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
-              <span>{new Date(n.created_at).toLocaleString()}</span>
-              {n.project_name && <span style={chipGrayStyle}>Project: {n.project_name}</span>}
-              {n.teacher_first_name && (
-                <a href={`/teachers/${n.teacher_id}`} style={chipBlueLinkStyle}>
-                  {n.teacher_first_name} {n.teacher_last_name}
-                </a>
-              )}
-              <button onClick={() => setDetailItem({ ...n, kind: 'note' })} style={ghostBtnStyle}>Details</button>
-              <button onClick={() => deleteNote(n.id)} style={ghostBtnStyle}>Delete</button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <section className="signal-home-section" aria-labelledby="all-notes">
+        <h2 id="all-notes" className="signal-home-section-title">All notes{notes ? ` (${notes.length})` : ''}</h2>
+        {notes === null && <p className="signal-home-empty">Loading…</p>}
+        {notes && notes.length === 0 && <p className="signal-home-empty">No notes in this workspace yet.</p>}
+        {notes && notes.length > 0 && (
+          <ul className="signal-notes-list" style={{ marginTop: 0 }}>
+            {notes.map((n) => (
+              <li key={n.id} className="signal-note-full">
+                <button type="button" className="signal-note-row" onClick={() => setDetailItem({ ...n, kind: 'note' })}>
+                  <span className="signal-note-text" style={{ WebkitLineClamp: 4 }}>{n.note_text}</span>
+                  <span className="signal-note-meta">
+                    {new Date(n.created_at).toLocaleString()}
+                    {n.list_name ? ` · List: ${n.list_name}` : ''}
+                    {n.teacher_first_name ? ` · ${n.teacher_first_name} ${n.teacher_last_name ?? ''}` : ''}
+                  </span>
+                </button>
+                <button type="button" className="signal-icon-btn" onClick={() => remove(n)} aria-label="Move this note to Trash" title="Move to Trash">🗑</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <DetailOverlay item={detailItem} onClose={() => setDetailItem(null)} />
+      {undo.bar}
     </div>
   );
 }
-
-const noteItemStyle = { padding: '12px 0', borderBottom: '1px solid #f2f2f2' };
-const chipBlueLinkStyle = { fontSize: 13, background: '#e8f0fb', color: '#1F3864', padding: '3px 10px', borderRadius: 'var(--radius-pill)', textDecoration: 'none' };
-const teacherMatchRowStyle = { padding: '8px 12px', fontSize: 15, cursor: 'pointer', borderBottom: '1px solid #f2f2f2' };

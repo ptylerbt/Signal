@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar.js';
 import AppearanceEffects from './components/AppearanceEffects.js';
 import ImpersonationBanner from './components/ImpersonationBanner.js';
 import WorkspaceSwitcher from './components/WorkspaceSwitcher.js';
+import PracticeBanner from './components/PracticeBanner.js';
 import { clerkAppearance } from './components/clerkAppearance.js';
 import './globals.css';
 
@@ -41,7 +42,12 @@ export default function RootLayout({ children }) {
                   </SignedOut>
                 </header>
               </div>
-              <main className="signal-content">{children}</main>
+              <main className="signal-content">
+                <SignedIn>
+                  <PracticeBanner />
+                </SignedIn>
+                {children}
+              </main>
             </div>
           </div>
         </body>

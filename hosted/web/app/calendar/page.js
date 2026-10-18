@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import DetailOverlay from '../components/DetailOverlay.js';
+import HelpBubble from '../components/HelpBubble.js';
 
 function dateKey(d) {
   return d.toISOString().slice(0, 10);
@@ -82,7 +83,9 @@ export default function CalendarPage() {
     <div className="signal-dashboard-col">
       <div className="signal-panel signal-panel-grow signal-calendar-panel">
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <h1 style={titleStyle}>Calendar</h1>
+          <h1 style={titleStyle}>
+            Calendar <HelpBubble text="Dots show the days you emailed people (blue) and marked a reply (green). Click a day to see what happened." />
+          </h1>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button onClick={() => setMonthOffset((m) => m - 1)} style={ghostBtnStyle} aria-label="Previous month">← Prev</button>
             <strong style={{ fontSize: 16, color: '#1F3864' }}>
@@ -94,7 +97,7 @@ export default function CalendarPage() {
 
         <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
           <span style={legendDotStyle('#1F3864')} /> Sent &nbsp;&nbsp;
-          <span style={legendDotStyle('#1e6e34')} /> Status change
+          <span style={legendDotStyle('#1e6e34')} /> Reply marked
         </div>
 
         <div className="signal-calendar-grid">
@@ -154,7 +157,7 @@ export default function CalendarPage() {
                 <strong>{s.first_name} {s.last_name}</strong>
                 {s.school ? ` · ${s.school}` : ''}
                 <span style={dayDetailMetaStyle}>
-                  {s.template_name || 'Group announcement'} · {new Date(s.generated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                  {s.template_name || 'Message'}{s.list_name ? ` · ${s.list_name}` : ''} · {new Date(s.generated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                 </span>
               </span>
               <span style={dayDetailArrowStyle} aria-hidden="true">›</span>
@@ -171,7 +174,7 @@ export default function CalendarPage() {
               <span style={{ flex: 1, minWidth: 0 }}>
                 <strong>{s.first_name} {s.last_name}</strong> marked <strong>{s.status}</strong>
                 <span style={dayDetailMetaStyle}>
-                  {s.project_name} · {new Date(s.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                  {s.list_name} · {new Date(s.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                 </span>
               </span>
               <span style={dayDetailArrowStyle} aria-hidden="true">›</span>

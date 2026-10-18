@@ -5,7 +5,7 @@ import { titleStyle, primaryBtnStyle, ghostBtnStyle, chipBlueStyle, chipGrayStyl
 
 // Shared "what happened here" overlay, opened by clicking a calendar entry
 // (a send or a status change) or a note. Shows the full record and offers
-// direct jumps to the associated project and teacher profile.
+// direct jumps to the associated list and person.
 //
 // `item` shape: { kind: 'send' | 'status' | 'note', ...row }
 export default function DetailOverlay({ item, onClose }) {
@@ -34,8 +34,7 @@ export default function DetailOverlay({ item, onClose }) {
           {item.kind === 'send' && <span style={chipBlueStyle}>Communication sent</span>}
           {item.kind === 'status' && <span style={chipBlueStyle}>Status change</span>}
           {item.kind === 'note' && <span style={chipBlueStyle}>Note</span>}
-          {item.project_name && <span style={chipGrayStyle}>Project: {item.project_name}</span>}
-          {item.group_name && <span style={chipGrayStyle}>Group: {item.group_name}</span>}
+          {item.list_name && <span style={chipGrayStyle}>List: {item.list_name}</span>}
         </div>
 
         <dl style={dlStyle}>
@@ -43,14 +42,14 @@ export default function DetailOverlay({ item, onClose }) {
           {item.kind === 'send' && (
             <>
               <Row label="When" value={formatFull(item.generated_at)} />
-              <Row label="Letter" value={item.template_name || 'Group announcement'} />
+              <Row label="Letter" value={item.template_name || 'Message (one email to everyone)'} />
               {item.email && <Row label="Sent to" value={item.email} />}
-              {item.recipient_field && <Row label="Field" value={item.recipient_field.toUpperCase()} />}
+              {item.recipient_field && <Row label="Sent as" value={item.recipient_field === 'bcc' ? 'Private (Bcc)' : item.recipient_field.toUpperCase()} />}
               {item.school && <Row label="School" value={item.school} />}
               {item.subject && <Row label="Subject" value={item.subject} />}
               {item.level && <Row label="Level" value={item.level} />}
               {item.district && <Row label="District" value={item.district} />}
-              <Row label="Status" value={item.status || 'Opened in mail client'} />
+              <Row label="Status" value="Opened in your email app" />
             </>
           )}
           {item.kind === 'status' && (
@@ -68,22 +67,22 @@ export default function DetailOverlay({ item, onClose }) {
         </dl>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 22 }}>
-          {item.project_id && (
-            <a href={`/projects?open=${item.project_id}`} style={{ ...primaryBtnStyle, textDecoration: 'none', display: 'inline-block' }}>
-              Go to Project →
+          {item.list_id && (
+            <a href={`/lists/${item.list_id}`} style={{ ...primaryBtnStyle, textDecoration: 'none', display: 'inline-block' }}>
+              Go to List →
             </a>
           )}
           {teacherId && (
-            <a href={`/teachers/${teacherId}`} style={{ ...ghostBtnStyle, textDecoration: 'none', display: 'inline-block' }}>
+            <a href={`/people/${teacherId}`} style={{ ...ghostBtnStyle, textDecoration: 'none', display: 'inline-block' }}>
               Open Profile →
             </a>
           )}
           <button onClick={onClose} style={ghostBtnStyle}>Close</button>
         </div>
 
-        {!item.project_id && (
+        {!item.list_id && (
           <p style={{ fontSize: 13.5, color: '#888', marginTop: 14, marginBottom: 0 }}>
-            This one isn’t linked to a project.
+            This one isn’t linked to a list.
           </p>
         )}
       </div>

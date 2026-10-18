@@ -12,6 +12,7 @@ export default function SettingsPage() {
   const [highContrast, setHighContrast] = useState(false);
   const [signature, setSignature] = useState('');
   const [status, setStatus] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   async function load() {
     try {
@@ -24,6 +25,7 @@ export default function SettingsPage() {
         setFontScale(data.fontScale);
         setHighContrast(data.highContrast);
         setSignature(data.defaultSignature || '');
+        setShowAdvanced(!!data.showAdvanced);
       }
     } catch {
       // Fall through to defaults below rather than getting stuck loading forever.
@@ -38,7 +40,27 @@ export default function SettingsPage() {
 
   // Live-preview accessibility changes immediately, before saving.
   useEffect(() => {
-    if (!loaded) return;
+    // Saved immediately; the page reloads so the sidebar shows/hides the tools.
+  async function toggleAdvanced(next) {
+    setShowAdvanced(next);
+    await fetch('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ showAdvanced: next }),
+    });
+    window.location.reload();
+  }
+
+  async function openPractice(reset) {
+    await fetch('/api/workspaces/practice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reset }),
+    });
+    window.location.href = '/';
+  }
+
+  if (!loaded) return;
     document.documentElement.style.fontSize = `${18 * fontScale}px`;
   }, [fontScale, loaded]);
 
@@ -116,9 +138,9 @@ export default function SettingsPage() {
       </div>
 
       <div style={cardStyle}>
-        <h2 style={titleStyle}>Compose Defaults</h2>
+        <h2 style={titleStyle}>Email signature</h2>
         <p style={{ fontSize: 15, color: '#666', marginTop: 0 }}>
-          Added automatically to the end of Group Announcements you send from Compose.
+          Added automatically to the end of messages you write in Write Email.
         </p>
         <textarea
           placeholder="e.g. Thanks,&#10;Your Name"
@@ -128,6 +150,28 @@ export default function SettingsPage() {
           style={{ ...inputStyle, width: '100%', fontFamily: 'inherit', marginBottom: 12 }}
         />
         <button onClick={save} style={primaryBtnStyle}>Save</button>
+      </div>
+
+      <div style={cardStyle}>
+        <h2 style={titleStyle}>🧪 Practice</h2>
+        <p style={{ fontSize: 15, color: '#666', marginTop: 0 }}>
+          A workspace full of pretend people, lists, and a letter. Try anything there — nothing is real, and pretend emails go nowhere.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+          <button onClick={() => openPractice(false)} style={primaryBtnStyle}>Open Practice</button>
+          <button onClick={() => openPractice(true)} className="signal-btn-ghost">Start Practice over</button>
+        </div>
+      </div>
+
+      <div style={cardStyle}>
+        <h2 style={titleStyle}>Advanced tools</h2>
+        <label className="signal-check-row" style={{ marginTop: 0 }}>
+          <input type="checkbox" checked={showAdvanced} onChange={(e) => toggleAdvanced(e.target.checked)} />
+          <span>
+            Show advanced tools
+            <span className="signal-check-sub">Adds “Find duplicates” and “Backup” under More. Most people don’t need these.</span>
+          </span>
+        </label>
       </div>
     </div>
   );

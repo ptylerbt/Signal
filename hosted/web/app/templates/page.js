@@ -1,158 +1,187 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { titleStyle, selectStyle } from '../components/ui.js';
+import HelpBubble from '../components/HelpBubble.js';
+import { useUndoBar } from '../components/UndoBar.js';
 
-export default function TemplatesPage() {
-  const [templates, setTemplates] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+// "Letters": Word (.docx) letters with [Blanks] that Signal fills in per
+// person. Each blank has to be linked to a detail (First name, Email...)
+// once, before the letter can be used in Write Email.
+export default function LettersPage() {
+  const [letters, setLetters] = useState(null);
+  const [openId, setOpenId] = useState(null);
   const [labelMaps, setLabelMaps] = useState([]);
-  const [availableFields, setAvailableFields] = useState([]);
+  const [fields, setFields] = useState([]);
   const [uploading, setUploading] = useState(false);
-  const [status, setStatus] = useState('');
-  const fileInputRef = useRef(null);
+  const [message, setMessage] = useState('');
+  const fileRef = useRef(null);
+  const undo = useUndoBar();
 
-  async function loadTemplates() {
-    const res = await fetch('/api/templates');
-    if (res.ok) setTemplates(await res.json());
+  async function load() {
+    try {
+      const res = await fetch('/api/templates');
+      setLetters(res.ok ? await res.json() : []);
+    } catch {
+      setLetters([]);
+    }
   }
 
   useEffect(() => {
-    loadTemplates();
+    load();
   }, []);
 
-  async function loadLabelMaps(templateId) {
-    const res = await fetch(`/api/templates/${templateId}/label-maps`);
+  async function openLetter(id) {
+    if (openId === id) {
+      setOpenId(null);
+      return;
+    }
+    setOpenId(id);
+    setLabelMaps([]);
+    const res = await fetch(`/api/templates/${id}/label-maps`);
     if (res.ok) {
       const data = await res.json();
       setLabelMaps(data.labelMaps);
-      setAvailableFields(data.availableFields);
+      setFields(data.availableFields);
     }
   }
 
-  function selectTemplate(t) {
-    setSelectedId(t.id);
-    loadLabelMaps(t.id);
-  }
-
-  async function handleUpload(e) {
+  async function onFile(e) {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    setStatus('Uploading and scanning for [Labels]...');
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await fetch('/api/templates', { method: 'POST', body: formData });
-    setUploading(false);
     e.target.value = '';
-
-    if (res.ok) {
+    if (!file) return;
+    setUploading(true);
+    setMessage('Reading your letter…');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/templates', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error();
       const data = await res.json();
-      setStatus(`Found ${data.labels.length} label(s): ${data.labels.join(', ') || 'none'}`);
-      await loadTemplates();
-      selectTemplate({ id: data.templateId });
-    } else {
-      setStatus('Upload failed.');
+      setMessage(
+        data.labels.length
+          ? `Added ✓ Found ${data.labels.length} ${data.labels.length === 1 ? 'blank' : 'blanks'}: ${data.labels.map((l) => `[${l}]`).join(' ')}`
+          : 'Added ✓ No [blanks] found, so everyone will get the same letter.'
+      );
+      await load();
+      await openLetter(data.templateId);
+    } catch {
+      setMessage('That file couldn’t be read. Is it a Word (.docx) file?');
     }
+    setUploading(false);
   }
 
-  async function updateMapping(labelMapId, matchedColumn) {
-    setLabelMaps((prev) =>
-      prev.map((lm) => (lm.id === labelMapId ? { ...lm, matched_column: matchedColumn, manual_override: true } : lm))
-    );
-    await fetch(`/api/templates/${selectedId}/label-maps`, {
+  async function setMapping(labelMapId, column) {
+    setLabelMaps((prev) => prev.map((lm) => (lm.id === labelMapId ? { ...lm, matched_column: column || null } : lm)));
+    await fetch(`/api/templates/${openId}/label-maps`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ labelMapId, matchedColumn: matchedColumn || null }),
+      body: JSON.stringify({ labelMapId, matchedColumn: column || null }),
     });
+    await load();
   }
 
-  const selectedTemplate = templates.find((t) => t.id === selectedId);
-  const unmappedCount = labelMaps.filter((lm) => !lm.matched_column).length;
+  async function trash(letter) {
+    await fetch(`/api/templates/${letter.id}`, { method: 'DELETE' });
+    if (openId === letter.id) setOpenId(null);
+    undo.show(`“${niceName(letter)}” moved to Trash`, async () => {
+      await fetch('/api/trash', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'letter', id: letter.id }),
+      });
+      await load();
+    });
+    await load();
+  }
 
   return (
-    <div style={{ maxWidth: 820 }}>
-      <div className="signal-card">
-        <h2 style={titleStyle}>Upload Letter Template</h2>
-        <p style={{ fontSize: 15, color: '#666', marginTop: 0 }}>
-          Upload a .docx letter with bracketed labels like <code>[First]</code> or <code>[School]</code>.
-          Signal will detect them and let you map each one to a roster column.
+    <div className="signal-home">
+      <header className="signal-home-header">
+        <div className="signal-title-row">
+          <h1 className="signal-home-title">Letters</h1>
+          <HelpBubble text="A letter is a Word document you send often. Put blanks in square brackets, like [First], and Signal fills in each person's details for you." />
+        </div>
+        <p className="signal-home-sub">
+          Saved letters for this workspace. Write blanks in your Word document like <strong>[First]</strong> or <strong>[School]</strong>, and each person gets their own copy.
         </p>
+      </header>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".docx"
-          onChange={handleUpload}
-          disabled={uploading}
-          className="signal-visually-hidden"
-          tabIndex={-1}
-          aria-hidden="true"
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="signal-upload-btn"
-        >
-          {uploading ? 'Uploading...' : 'Choose .docx file'}
+      <div className="signal-people-actions">
+        <button type="button" className="signal-btn-add" onClick={() => fileRef.current?.click()} disabled={uploading}>
+          <span aria-hidden="true">+</span> {uploading ? 'Adding…' : 'Add a letter (.docx)'}
         </button>
-
-        {status && <p style={{ fontSize: 15, color: '#1F3864', marginTop: 10 }}>{status}</p>}
+        <input ref={fileRef} type="file" accept=".docx" className="signal-visually-hidden" onChange={onFile} tabIndex={-1} aria-hidden="true" />
       </div>
+      {message && <p className="signal-inline-message" role="status">{message}</p>}
 
-      <div className="signal-card">
-        <h2 style={titleStyle}>Templates</h2>
-        {templates.length === 0 && <p style={{ color: '#666', fontSize: 15 }}>No templates uploaded yet.</p>}
-        {templates.map((t) => (
-          <div
-            key={t.id}
-            onClick={() => selectTemplate(t)}
-            style={{
-              ...templateRowStyle,
-              background: t.id === selectedId ? '#f2f5fb' : 'transparent',
-            }}
-          >
-            <span>{t.file_name}</span>
-            <span style={{ fontSize: 13, color: '#666' }}>
-              {new Date(t.uploaded_at).toLocaleDateString()} — {(t.detected_labels_json || []).length} label(s)
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {selectedTemplate && (
-        <div className="signal-card">
-          <h2 style={titleStyle}>Map Labels — {selectedTemplate.file_name}</h2>
-          {unmappedCount > 0 && (
-            <p style={{ fontSize: 15, color: '#a33', marginTop: 0 }}>
-              {unmappedCount} label(s) still unmapped — generating letters will be blocked until every label has a column.
-            </p>
-          )}
-          {labelMaps.length === 0 && <p style={{ color: '#666', fontSize: 15 }}>No labels detected in this document.</p>}
-          {labelMaps.map((lm) => (
-            <div key={lm.id} style={labelRowStyle}>
-              <span style={{ fontFamily: 'monospace', fontSize: 16 }}>[{lm.label_name}]</span>
-              <select
-                value={lm.matched_column || ''}
-                onChange={(e) => updateMapping(lm.id, e.target.value)}
-                style={selectStyle}
-              >
-                <option value="">— Unmapped —</option>
-                {availableFields.map((f) => (
-                  <option key={f.column} value={f.column}>{f.label}</option>
-                ))}
-              </select>
-              {lm.manual_override && <span style={{ fontSize: 13, color: '#666' }}>manually set</span>}
-            </div>
-          ))}
+      {letters === null && <p className="signal-home-empty">Loading…</p>}
+      {letters && letters.length === 0 && (
+        <div className="signal-empty-big">
+          <p className="signal-empty-big-title">No letters yet.</p>
+          <p className="signal-home-sub">Add a Word document you send often. You can always just write a message in Write Email instead.</p>
         </div>
       )}
+
+      {letters && letters.length > 0 && (
+        <ul className="signal-people-list">
+          {letters.map((l) => {
+            const ready = l.unmapped_count === 0;
+            const isOpen = openId === l.id;
+            return (
+              <li key={l.id} className={`signal-letter-item${isOpen ? ' open' : ''}`}>
+                <div className="signal-member-row">
+                  <button type="button" className="signal-member-who signal-plain-btn" onClick={() => openLetter(l.id)} aria-expanded={isOpen}>
+                    <span className="signal-person-name">📄 {niceName(l)}</span>
+                    <span className={`signal-person-meta${ready ? ' signal-ok' : ' signal-warn'}`}>
+                      {ready ? 'Ready to use ✓' : `Needs setting up: ${l.unmapped_count} ${l.unmapped_count === 1 ? 'blank' : 'blanks'} to link`}
+                    </span>
+                  </button>
+                  <button type="button" className="signal-btn-ghost signal-btn-small" onClick={() => openLetter(l.id)}>
+                    {isOpen ? 'Close' : ready ? 'See blanks' : 'Set up'}
+                  </button>
+                  <button type="button" className="signal-icon-btn" onClick={() => trash(l)} aria-label={`Move ${niceName(l)} to Trash`} title="Move to Trash">🗑</button>
+                </div>
+
+                {isOpen && (
+                  <div className="signal-wizard-panel signal-letter-setup">
+                    {labelMaps.length === 0 ? (
+                      <p className="signal-home-sub">This letter has no [blanks], so everyone gets the same words.</p>
+                    ) : (
+                      <>
+                        <p className="signal-home-sub">For each blank, choose what to fill in. This is saved right away.</p>
+                        {labelMaps.map((lm) => (
+                          <div key={lm.id} className="signal-blank-row">
+                            <label htmlFor={`lm-${lm.id}`} className="signal-blank-label">
+                              Fill in <code>[{lm.label_name}]</code> with:
+                            </label>
+                            <select
+                              id={`lm-${lm.id}`}
+                              className={`signal-status-select${lm.matched_column ? ' set' : ''}`}
+                              value={lm.matched_column || ''}
+                              onChange={(e) => setMapping(lm.id, e.target.value)}
+                            >
+                              <option value="">— Choose —</option>
+                              {fields.map((f) => (
+                                <option key={f.column} value={f.column}>{f.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {undo.bar}
     </div>
   );
 }
 
-const templateRowStyle = { display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '12px 14px', borderBottom: '1px solid #f2f2f2', fontSize: 16, cursor: 'pointer', borderRadius: 'var(--radius-md)' };
-const labelRowStyle = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14, padding: '10px 0', borderBottom: '1px solid #f2f2f2', fontSize: 15 };
+function niceName(letter) {
+  return letter.file_name.replace(/\.docx$/i, '');
+}

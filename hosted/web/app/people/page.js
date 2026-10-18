@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AddPersonModal from '../components/AddPersonModal.js';
+import HelpBubble from '../components/HelpBubble.js';
 import { useUndoBar, undoRosterSnapshot } from '../components/UndoBar.js';
 
 export default function PeoplePage() {
@@ -105,7 +106,10 @@ export default function PeoplePage() {
   return (
     <div className="signal-home">
       <header className="signal-home-header">
-        <h1 className="signal-home-title">People</h1>
+        <div className="signal-title-row">
+          <h1 className="signal-home-title">People</h1>
+          <HelpBubble text="Everyone you email in this workspace. Add someone with the big button, or bring in a whole Excel sheet at once." />
+        </div>
         <p className="signal-home-sub">Everyone in <strong>{workspace.emoji} {workspace.name}</strong>. Click a name to see or change their details.</p>
       </header>
 
@@ -115,6 +119,7 @@ export default function PeoplePage() {
         </button>
         <button type="button" className="signal-btn-ghost" onClick={() => fileRef.current?.click()}>Import from Excel</button>
         <a className="signal-btn-ghost signal-btn-link" href="/api/people/template">Download blank sheet</a>
+        <HelpBubble text="Download an empty Excel sheet with the right columns. Fill it in, save it, then press Import from Excel." />
         <input ref={fileRef} type="file" accept=".xlsx" className="signal-visually-hidden" onChange={onFileChosen} tabIndex={-1} aria-hidden="true" />
       </div>
 

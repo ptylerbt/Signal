@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { buildMailtoUrl, buildAnnouncementMailtoUrl } from '../../lib/mailto.js';
+import HelpBubble from '../components/HelpBubble.js';
 
 // Write Email, as a 3-step wizard: Who → What → Check & send.
 // Nothing is ever sent from here: each step ends by opening her own email
@@ -182,7 +183,10 @@ export default function ComposePage() {
 
   return (
     <div className="signal-home signal-wizard">
-      <h1 className="signal-home-title">Write an email</h1>
+      <div className="signal-title-row">
+        <h1 className="signal-home-title">Write an email</h1>
+        <HelpBubble text="Three steps: pick who, pick what to send, then check it. Signal never sends anything by itself. It opens your email app, and you press Send there." />
+      </div>
       <ol className="signal-steps" aria-label="Steps">
         {STEPS.map((label, i) => (
           <li key={label} className={`signal-step${step === i + 1 ? ' current' : ''}${step > i + 1 ? ' done' : ''}`} aria-current={step === i + 1 ? 'step' : undefined}>
@@ -236,7 +240,10 @@ export default function ComposePage() {
         <section aria-labelledby="what-title">
           <WhoSummary source={source} withEmail={withEmail} withoutEmail={withoutEmail} onChange={() => setStep(1)} />
 
-          <h2 id="what-title" className="signal-wizard-question">What do you want to send?</h2>
+          <h2 id="what-title" className="signal-wizard-question">
+            What do you want to send?{' '}
+            <HelpBubble text="Write a message to type something new. Use a saved letter to send a letter from the Letters page, with each person's name filled in." />
+          </h2>
           <div className="signal-choice-cards signal-choice-two">
             <button type="button" className={`signal-choice-card${mode === 'message' ? ' selected' : ''}`} onClick={() => chooseMode('message')} aria-pressed={mode === 'message'}>
               <span className="signal-choice-icon" aria-hidden="true">✎</span>

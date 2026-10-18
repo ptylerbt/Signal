@@ -7,15 +7,19 @@ export async function GET() {
   if (!ctx) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   const userId = ctx.effectiveOwnerId;
 
+  // Notes in the CURRENT workspace. Notes written before workspaces existed
+  // have none, so they're adopted into whichever workspace is open.
   const notes = await withActingClient(ctx, async (client) => {
+    const workspace = await getCurrentWorkspace(client, userId);
+    await client.query('update notes set workspace_id = $2 where owner_id = $1 and workspace_id is null', [userId, workspace.id]);
     const { rows } = await client.query(
-      `select n.*, p.name as project_name, t.first_name as teacher_first_name, t.last_name as teacher_last_name
+      `select n.*, l.name as list_name, t.first_name as teacher_first_name, t.last_name as teacher_last_name
        from notes n
-       left join projects p on p.id = n.project_id and p.owner_id = n.owner_id
+       left join lists l on l.id = n.list_id and l.owner_id = n.owner_id and l.deleted_at is null
        left join teachers t on t.id = n.teacher_id and t.owner_id = n.owner_id
-       where n.owner_id = $1
+       where n.owner_id = $1 and n.workspace_id = $2 and n.deleted_at is null
        order by n.created_at desc`,
-      [userId]
+      [userId, workspace.id]
     );
     return rows;
   });

@@ -68,6 +68,15 @@ export default function WorkspaceSwitcher() {
     window.location.reload();
   }
 
+  async function openPractice() {
+    if (current.is_practice) {
+      setOpen(false);
+      return;
+    }
+    await fetch('/api/workspaces/practice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    window.location.href = '/';
+  }
+
   return (
     <div className="signal-ws" ref={wrapRef}>
       <button
@@ -91,7 +100,7 @@ export default function WorkspaceSwitcher() {
         <div className="signal-ws-menu" role="menu">
           <p className="signal-ws-help">Each workspace keeps its own people, lists, and letters. Pick one to work in.</p>
 
-          {workspaces.map((w) => (
+          {workspaces.filter((w) => !w.is_practice).map((w) => (
             <button
               key={w.id}
               type="button"
@@ -112,6 +121,20 @@ export default function WorkspaceSwitcher() {
             </button>
           ))}
 
+          <button
+            type="button"
+            role="menuitem"
+            className={`signal-ws-item signal-ws-practice${current.is_practice ? ' current' : ''}`}
+            onClick={openPractice}
+          >
+            <span className="signal-ws-item-emoji" style={{ background: tint('#0f6b6b') }} aria-hidden="true">🧪</span>
+            <span className="signal-ws-item-text">
+              <span className="signal-ws-item-name">Practice</span>
+              <span className="signal-ws-item-meta">Pretend people to try things on. Nothing here is real.</span>
+            </span>
+            {current.is_practice && <span className="signal-ws-check" aria-label="Current workspace">✓</span>}
+          </button>
+
           <div className="signal-ws-actions">
             <button
               type="button"
@@ -123,7 +146,7 @@ export default function WorkspaceSwitcher() {
             >
               + New workspace
             </button>
-            <button
+            {!current.is_practice && <button
               type="button"
               className="signal-ws-edit"
               onClick={() => {
@@ -138,7 +161,7 @@ export default function WorkspaceSwitcher() {
               }}
             >
               ✎ Rename “{current.name}”
-            </button>
+            </button>}
           </div>
         </div>
       )}

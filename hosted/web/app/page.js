@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import ListsGrid from './components/ListsGrid.js';
 import DetailOverlay from './components/DetailOverlay.js';
+import HelpBubble from './components/HelpBubble.js';
 
 // Home: one big "Write an email" action, this workspace's lists, and what
 // was sent recently. Deliberately short — the calendar and notes live
@@ -37,7 +38,10 @@ export default function HomePage() {
         <h1 className="signal-home-title">
           <span aria-hidden="true">{workspace.emoji || '📁'}</span> {workspace.name}
         </h1>
-        <p className="signal-home-sub">What would you like to do?</p>
+        <p className="signal-home-sub">
+          What would you like to do?{' '}
+          <HelpBubble text="This is your starting page. Everything here belongs to the workspace shown at the top. Switch workspaces with the big button up there." />
+        </p>
       </header>
 
       <a href="/compose" className="signal-home-write">
@@ -51,7 +55,9 @@ export default function HomePage() {
 
       <section className="signal-home-section" aria-labelledby="home-lists">
         <div className="signal-home-section-head">
-          <h2 id="home-lists" className="signal-home-section-title">Your lists</h2>
+          <h2 id="home-lists" className="signal-home-section-title">
+            Your lists <HelpBubble text="A list is a group of people you email together, like Choir Members. Click one to add people or email them." />
+          </h2>
           {lists.length > 5 && <a href="/lists" className="signal-home-link">See all {lists.length} →</a>}
         </div>
         <ListsGrid lists={lists} limit={5} onCreated={load} />
@@ -60,7 +66,9 @@ export default function HomePage() {
       <NotesBox notes={notes} onSaved={load} onOpen={setDetailItem} />
 
       <section className="signal-home-section" aria-labelledby="home-recent">
-        <h2 id="home-recent" className="signal-home-section-title">Recently sent</h2>
+        <h2 id="home-recent" className="signal-home-section-title">
+          Recently sent <HelpBubble text="Emails you opened from Signal in this workspace, newest first. The full history is on the Calendar page under More." />
+        </h2>
         {recentSends.length === 0 ? (
           <p className="signal-home-empty">Nothing sent from this workspace yet. When you write an email, it will show up here.</p>
         ) : (
@@ -119,7 +127,9 @@ function NotesBox({ notes, onSaved, onOpen }) {
   return (
     <section className="signal-home-section" aria-labelledby="home-notes">
       <div className="signal-home-section-head">
-        <h2 id="home-notes" className="signal-home-section-title">Notes</h2>
+        <h2 id="home-notes" className="signal-home-section-title">
+          Notes <HelpBubble text="Type anything you want to remember and press Save note. Click a note to see all of it." />
+        </h2>
         <a href="/notes" className="signal-home-link">See all notes →</a>
       </div>
 

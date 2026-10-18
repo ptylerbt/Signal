@@ -1,9 +1,9 @@
 export const FIELD_ALIASES = {
   first_name: ['first name', 'first', 'firstname'],
   last_name: ['last name', 'last', 'lastname'],
-  school: ['school', 'school/district'],
-  level: ['level', 'grade level', 'school level'],
-  subject: ['subject', 'subject area', 'instrument'],
+  school: ['school', 'school/district', 'organization', 'school / organization'],
+  level: ['level', 'grade level', 'school level', 'grade', 'grade / level'],
+  subject: ['subject', 'subject area', 'instrument', 'role', 'role / subject'],
   email: ['email', 'e-mail', 'email address'],
   district: ['district'],
 };
@@ -11,9 +11,9 @@ export const FIELD_ALIASES = {
 export const AVAILABLE_FIELDS = [
   { column: 'first_name', label: 'First Name' },
   { column: 'last_name', label: 'Last Name' },
-  { column: 'school', label: 'School' },
-  { column: 'level', label: 'Level' },
-  { column: 'subject', label: 'Subject' },
+  { column: 'school', label: 'School or organization' },
+  { column: 'level', label: 'Grade or level' },
+  { column: 'subject', label: 'Role or subject' },
   { column: 'email', label: 'Email' },
   { column: 'district', label: 'District' },
 ];

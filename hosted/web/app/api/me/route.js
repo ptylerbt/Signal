@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { clerkClient } from '@clerk/nextjs/server';
-import { getActingContext } from '../../../lib/authContext.js';
+import { getActingContext, withActingClient } from '../../../lib/authContext.js';
 
 export async function GET() {
   const ctx = await getActingContext();
@@ -17,7 +17,15 @@ export async function GET() {
     }
   }
 
+  // The signed-in person's own Advanced switch (an admin viewing-as a member
+  // keeps their own tool visibility).
+  const showAdvanced = await withActingClient(ctx, async (client) => {
+    const { rows } = await client.query('select show_advanced from profiles where user_id = $1', [ctx.realUserId]);
+    return !!rows[0]?.show_advanced;
+  });
+
   return NextResponse.json({
+    showAdvanced,
     isAdmin: ctx.isAdmin,
     isImpersonating: ctx.isImpersonating,
     viewAsUserId: ctx.viewAsUserId,

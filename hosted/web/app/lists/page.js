@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ListsGrid from '../components/ListsGrid.js';
+import HelpBubble from '../components/HelpBubble.js';
 
 export default function ListsPage() {
   const [lists, setLists] = useState(null);
@@ -24,7 +25,10 @@ export default function ListsPage() {
   return (
     <div className="signal-home">
       <header className="signal-home-header">
-        <h1 className="signal-home-title">Lists</h1>
+        <div className="signal-title-row">
+          <h1 className="signal-home-title">Lists</h1>
+          <HelpBubble text="Make a list for each group you email, then click it to add people. Next time, emailing that group is one click." />
+        </div>
         <p className="signal-home-sub">A list is a group of people you email together, like “Choir Members” or “Festival Judges”.</p>
       </header>
 
