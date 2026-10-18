@@ -28,7 +28,7 @@ export async function POST(request) {
   if (!ctx) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   const userId = ctx.effectiveOwnerId;
 
-  const { noteText, projectId, teacherId } = await request.json();
+  const { noteText, projectId, teacherId, listId } = await request.json();
   if (!noteText || !noteText.trim()) {
     return NextResponse.json({ error: 'Note text is required' }, { status: 400 });
   }
@@ -36,8 +36,8 @@ export async function POST(request) {
   const note = await withActingClient(ctx, async (client) => {
     const workspace = await getCurrentWorkspace(client, userId);
     const { rows } = await client.query(
-      'insert into notes (owner_id, project_id, teacher_id, note_text, workspace_id) values ($1, $2, $3, $4, $5) returning *',
-      [userId, projectId || null, teacherId || null, noteText.trim(), workspace.id]
+      'insert into notes (owner_id, project_id, teacher_id, note_text, workspace_id, list_id) values ($1, $2, $3, $4, $5, $6) returning *',
+      [userId, projectId || null, teacherId || null, noteText.trim(), workspace.id, listId || null]
     );
     return rows[0];
   });

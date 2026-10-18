@@ -2,12 +2,19 @@
 import { normalizeName, assignmentKey, mergeUniqueValues } from './roster.js';
 import { snapshotTeachers } from './undo.js';
 
-export async function findExistingAssignment(client, ownerId, fields) {
+// With a workspaceId, a row only counts as "already imported" if that
+// person is already IN that workspace — someone known from another
+// workspace is still offered, so importing links them here too.
+export async function findExistingAssignment(client, ownerId, fields, workspaceId = null) {
   const { rows } = await client.query(
     `select ta.id
      from teacher_assignments ta
      join teachers t on t.id = ta.teacher_id
      where ta.owner_id = $1
+       and ($7::bigint is null or exists (
+         select 1 from workspace_people wp where wp.workspace_id = $7 and wp.teacher_id = t.id
+       ))
+       and t.deleted_at is null
        and lower(trim(coalesce(t.first_name, ''))) = $2
        and lower(trim(coalesce(t.last_name, ''))) = $3
        and lower(trim(coalesce(ta.school, ''))) = $4
@@ -21,6 +28,7 @@ export async function findExistingAssignment(client, ownerId, fields) {
       normalizeName(fields.school),
       normalizeName(fields.subject),
       normalizeName(fields.email),
+      workspaceId,
     ]
   );
   return rows.length > 0;
@@ -139,7 +147,7 @@ export async function dedupeAllAssignments(client, ownerId) {
 // Also returns an `undo` snapshot of any PRE-EXISTING teacher this import
 // touched (brand-new teachers just get deleted outright on undo, so they
 // need no prior-state snapshot).
-export async function importRows(client, ownerId, rows) {
+export async function importRows(client, ownerId, rows, { workspaceId = null } = {}) {
   const resolved = [];
   const preExistingTeacherIds = new Set();
 
@@ -189,6 +197,21 @@ export async function importRows(client, ownerId, rows) {
   for (const teacherId of touchedTeacherIds) {
     await dedupeAssignmentsForTeacher(client, ownerId, teacherId);
     await combineAssignmentsByEmail(client, ownerId, teacherId);
+  }
+
+  // Everyone imported belongs to the workspace they were imported into, and
+  // a re-imported person who'd been sent to Trash comes back.
+  if (workspaceId && touchedTeacherIds.size > 0) {
+    await client.query(
+      `insert into workspace_people (owner_id, workspace_id, teacher_id)
+       select $1, $2, unnest($3::bigint[])
+       on conflict do nothing`,
+      [ownerId, workspaceId, [...touchedTeacherIds]]
+    );
+    await client.query('update teachers set deleted_at = null where owner_id = $1 and id = any($2)', [
+      ownerId,
+      [...touchedTeacherIds],
+    ]);
   }
 
   // The snapshot only captured PRE-EXISTING teachers (new ones didn't exist

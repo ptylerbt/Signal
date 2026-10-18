@@ -1133,6 +1133,523 @@ html[data-contrast="high"] .signal-card {
   color: #777;
 }
 
+/* ---------- Phase 3: People, person profile, list page ---------- */
+.signal-btn-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.signal-btn-small {
+  min-height: 44px;
+  padding: 8px 18px;
+  font-size: 0.95rem;
+}
+.signal-btn-add,
+.signal-btn-email {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 14px 28px;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: var(--shadow-soft-md);
+}
+.signal-btn-add {
+  background: #1F3864;
+  color: #fff;
+}
+.signal-btn-add span {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.signal-btn-add:hover {
+  background: #16294a;
+  color: #fff;
+}
+.signal-btn-email {
+  background: #C1272D;
+  color: #fff;
+}
+.signal-btn-email:hover {
+  background: #a11e23;
+  color: #fff;
+}
+.signal-btn-danger {
+  min-height: 50px;
+  padding: 12px 24px;
+  background: #fff;
+  color: #a11e23;
+  border: 2px solid #f0d3d4;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.signal-btn-danger:hover {
+  background: #fdecec;
+  border-color: #a11e23;
+}
+.signal-people-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.signal-inline-message {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  background: #e8f0fb;
+  color: #1F3864;
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+}
+.signal-back-link {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.signal-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+.signal-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.signal-inline-form .signal-big-input {
+  width: auto;
+  flex: 1 1 180px;
+}
+.signal-stack-form {
+  max-width: 560px;
+}
+.signal-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 0 12px;
+}
+.signal-optional-heading {
+  margin: 22px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #eef1f7;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.signal-search {
+  margin-bottom: 14px;
+}
+.signal-empty-big {
+  padding: 32px 24px;
+  text-align: center;
+  background: var(--card-bg);
+  border: 2px dashed #c9d2e3;
+  border-radius: var(--radius-3xl);
+}
+.signal-empty-big-title {
+  margin: 0 0 6px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1F3864;
+}
+.signal-empty-big .signal-btn-add,
+.signal-empty-big .signal-btn-link {
+  margin-top: 16px;
+}
+
+/* People list */
+.signal-people-list,
+.signal-member-list,
+.signal-import-list,
+.signal-pick-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.signal-person-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 12px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-soft-sm);
+  text-decoration: none;
+  color: #1a1a1a;
+}
+.signal-person-row:hover {
+  border-color: #1F3864;
+  background: #f8faff;
+}
+.signal-person-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  background: #e8f0fb;
+  color: #1F3864;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.signal-person-text,
+.signal-member-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.signal-person-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1F3864;
+  overflow-wrap: anywhere;
+}
+.signal-person-meta {
+  font-size: 0.92rem;
+  color: #666;
+  overflow-wrap: anywhere;
+}
+.signal-person-arrow {
+  font-size: 1.8rem;
+  color: #1F3864;
+}
+
+/* Import review + people picker */
+.signal-import-review {
+  margin-bottom: 28px;
+  padding: 22px;
+  background: #fff;
+  border: 2px solid #1F3864;
+  border-radius: var(--radius-3xl);
+}
+.signal-import-list,
+.signal-pick-list {
+  max-height: 50vh;
+  overflow-y: auto;
+  margin: 14px 0 4px;
+}
+/* Picker window: header and buttons stay put, only the list scrolls, so
+   the Add button is always on screen (no window-inside-window scrolling). */
+.signal-modal-tall {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.signal-modal-tall .signal-pick-list {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: none;
+}
+.signal-modal-tall .signal-modal-buttons {
+  flex-shrink: 0;
+  margin-top: 16px;
+}
+.signal-import-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  min-height: 56px;
+  padding: 10px 14px;
+  background: #f8faff;
+  border: 1px solid #e3e8f2;
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+}
+.signal-import-row input {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  accent-color: #1F3864;
+}
+.signal-import-name {
+  font-weight: 700;
+}
+.signal-import-meta {
+  color: #666;
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+.signal-pick-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+}
+.signal-link-btn {
+  padding: 6px 2px;
+  background: none;
+  border: none;
+  color: #1F3864;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Person profile */
+.signal-detail-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 16px;
+}
+.signal-detail-card {
+  padding: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-soft-sm);
+}
+.signal-detail-editing {
+  border: 2px solid #1F3864;
+  background: #fff;
+}
+.signal-detail-editing .signal-field-label:first-child {
+  margin-top: 0;
+}
+.signal-detail-add {
+  min-height: 180px;
+}
+.signal-detail-line {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+.signal-detail-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.signal-detail-value {
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+.signal-detail-value.empty {
+  color: #999;
+  font-style: italic;
+}
+.signal-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+.signal-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.signal-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 16px;
+  background: #eef1f7;
+  color: #1a1a1a;
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.signal-chip-on {
+  background: #e8f0fb;
+  border-color: #1F3864;
+  color: #1F3864;
+}
+.signal-chip-add {
+  background: #fff;
+  border: 2px dashed #1F3864;
+  color: #1F3864;
+  cursor: pointer;
+}
+.signal-chip-add:hover,
+.signal-chip-link:hover {
+  background: #e8f0fb;
+}
+.signal-chip-link {
+  color: #1F3864;
+}
+.signal-chip-sub {
+  font-weight: 400;
+  color: #555;
+}
+.signal-note-static {
+  cursor: default;
+}
+.signal-note-static:hover {
+  background: #fff;
+  border-color: #e3e8f2;
+}
+.signal-danger-zone {
+  padding-top: 20px;
+  border-top: 1px solid #e3e8f2;
+}
+
+/* List page members */
+.signal-member-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  min-height: 72px;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-soft-sm);
+}
+.signal-member-who {
+  flex: 1 1 220px;
+  text-decoration: none;
+}
+.signal-member-who:hover .signal-person-name {
+  text-decoration: underline;
+}
+.signal-status-select {
+  min-height: 48px;
+  padding: 8px 14px;
+  border: 2px solid #dde3ef;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #444;
+  cursor: pointer;
+}
+.signal-status-select.set {
+  border-color: #1e6e34;
+  background: #e6f4ea;
+  color: #1e6e34;
+}
+.signal-icon-btn {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border: 2px solid #f0d3d4;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: #a11e23;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.signal-icon-btn:hover {
+  background: #fdecec;
+  border-color: #a11e23;
+}
+
+/* Clickable list cards */
+.signal-list-card-link {
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.signal-list-card-link:hover {
+  border-color: #1F3864;
+  box-shadow: var(--shadow-soft-md);
+}
+.signal-list-card-open {
+  font-weight: 700;
+  color: #1F3864;
+}
+
+/* Undo bar */
+.signal-undo-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 12px 14px 12px 22px;
+  background: #1F3864;
+  color: #fff;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-soft-lg);
+}
+.signal-undo-label {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.signal-undo-btn {
+  min-height: 46px;
+  padding: 8px 24px;
+  background: #fff;
+  color: #1F3864;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.signal-undo-close {
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  color: #fff;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .signal-btn-add,
+  .signal-btn-email {
+    width: 100%;
+    justify-content: center;
+  }
+  .signal-people-actions .signal-btn-ghost {
+    flex: 1 1 auto;
+  }
+  .signal-member-row .signal-status-select {
+    flex: 1;
+  }
+}
+
+html[data-contrast="high"] .signal-person-row,
+html[data-contrast="high"] .signal-member-row,
+html[data-contrast="high"] .signal-detail-card,
+html[data-contrast="high"] .signal-import-row {
+  border-color: #000;
+  background: #fff;
+}
+
 /* ---------- Calendar page ---------- */
 .signal-calendar-page {
   max-width: 900px;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Modal from './Modal.js';
 
 export const WORKSPACE_EMOJIS = ['🎵', '⛪', '🏫', '🎺', '🎻', '🎹', '🎤', '🥁', '⭐', '🏠', '💼', '❤️'];
 export const WORKSPACE_COLORS = [
@@ -155,14 +156,6 @@ function WorkspaceEditor({ editor, onClose }) {
   const [saving, setSaving] = useState(false);
   const isNew = editor.mode === 'new';
 
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   async function save(e) {
     e.preventDefault();
     if (!name.trim()) {
@@ -191,8 +184,7 @@ function WorkspaceEditor({ editor, onClose }) {
   }
 
   return (
-    <div className="signal-modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <form className="signal-modal" onSubmit={save} role="dialog" aria-modal="true" aria-labelledby="ws-editor-title">
+    <Modal as="form" onSubmit={save} onClose={onClose} labelledBy="ws-editor-title">
         <h2 id="ws-editor-title" className="signal-modal-title">{isNew ? 'New workspace' : 'Rename workspace'}</h2>
         {isNew && <p className="signal-modal-help">Make one for each group you email for — for example DMEA, Church, or School.</p>}
 
@@ -250,8 +242,7 @@ function WorkspaceEditor({ editor, onClose }) {
             {saving ? 'Saving…' : isNew ? 'Create workspace' : 'Save'}
           </button>
         </div>
-      </form>
-    </div>
+    </Modal>
   );
 }
 

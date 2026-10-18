@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getActingContext, withActingClient } from '../../../lib/authContext.js';
+import { getCurrentWorkspace } from '../../../lib/workspaces.js';
+import { linkPersonToWorkspace } from '../../../lib/people.js';
 
 export async function GET() {
   const ctx = await getActingContext();
@@ -46,6 +48,8 @@ export async function POST(request) {
        returning *`,
       [userId, firstName || null, lastName || null]
     );
+    const workspace = await getCurrentWorkspace(client, userId);
+    await linkPersonToWorkspace(client, userId, workspace.id, rows[0].id);
     return rows[0];
   });
 

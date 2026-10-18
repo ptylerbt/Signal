@@ -4,9 +4,11 @@
 const COLUMN_ALIASES = {
   first_name: ['first name', 'first', 'firstname'],
   last_name: ['last name', 'last', 'lastname'],
-  school: ['school', 'school/district', 'district'],
-  level: ['level', 'grade level', 'school level'],
-  subject: ['subject', 'subject area', 'instrument'],
+  // The friendlier "People" names (from the blank sheet download) map onto
+  // the same three underlying fields as the original teacher columns.
+  school: ['school', 'school/district', 'district', 'organization', 'school / organization', 'school/organization'],
+  level: ['level', 'grade level', 'school level', 'grade', 'grade / level', 'grade/level'],
+  subject: ['subject', 'subject area', 'instrument', 'role', 'role / subject', 'role/subject'],
   email: ['email', 'e-mail', 'email address'],
 };
 

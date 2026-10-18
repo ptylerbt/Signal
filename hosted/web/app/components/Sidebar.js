@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 // under "More" so the everyday choices stay few and obvious.
 const MAIN_ITEMS = [
   { href: '/', label: 'Home', icon: IconHome },
-  { href: '/roster', label: 'People', icon: IconPeople },
+  { href: '/people', label: 'People', icon: IconPeople },
   { href: '/lists', label: 'Lists', icon: IconList },
 ];
 

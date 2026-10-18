@@ -13,7 +13,7 @@
 
 export async function snapshotTeachers(client, ownerId, teacherIds) {
   if (!teacherIds || teacherIds.length === 0) {
-    return { teacherIds: [], teachers: [], teacher_assignments: [], group_members: [], project_members: [], project_person_status: [], notes: [], send_records: [] };
+    return { teacherIds: [], teachers: [], teacher_assignments: [], group_members: [], project_members: [], project_person_status: [], notes: [], send_records: [], workspace_people: [], list_members: [] };
   }
 
   const { rows: teachers } = await client.query('select * from teachers where owner_id = $1 and id = any($2)', [ownerId, teacherIds]);
@@ -26,6 +26,8 @@ export async function snapshotTeachers(client, ownerId, teacherIds) {
   const { rows: projectMembers } = await client.query('select * from project_members where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
   const { rows: projectStatus } = await client.query('select * from project_person_status where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
   const { rows: notes } = await client.query('select * from notes where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
+  const { rows: workspacePeople } = await client.query('select * from workspace_people where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
+  const { rows: listMembers } = await client.query('select * from list_members where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
   const { rows: sendRecords } = assignmentIds.length
     ? await client.query('select * from send_records where owner_id = $1 and assignment_id = any($2)', [ownerId, assignmentIds])
     : { rows: [] };
@@ -39,6 +41,8 @@ export async function snapshotTeachers(client, ownerId, teacherIds) {
     project_person_status: projectStatus,
     notes,
     send_records: sendRecords,
+    workspace_people: workspacePeople,
+    list_members: listMembers,
   };
 }
 
@@ -75,14 +79,16 @@ export async function restoreTeachersSnapshot(client, ownerId, snapshot) {
   await client.query('delete from project_person_status where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
   await client.query('delete from project_members where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
   await client.query('delete from notes where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
+  await client.query('delete from list_members where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
+  await client.query('delete from workspace_people where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
   await client.query('delete from teacher_assignments where owner_id = $1 and teacher_id = any($2)', [ownerId, teacherIds]);
   await client.query('delete from teachers where owner_id = $1 and id = any($2)', [ownerId, teacherIds]);
 
   for (const t of snapshot.teachers) {
     await client.query(
-      `insert into teachers (id, owner_id, first_name, last_name, is_district_rep, created_at)
-       overriding system value values ($1, $2, $3, $4, $5, $6)`,
-      [t.id, ownerId, t.first_name, t.last_name, t.is_district_rep, t.created_at]
+      `insert into teachers (id, owner_id, first_name, last_name, is_district_rep, created_at, deleted_at)
+       overriding system value values ($1, $2, $3, $4, $5, $6, $7)`,
+      [t.id, ownerId, t.first_name, t.last_name, t.is_district_rep, t.created_at, t.deleted_at ?? null]
     );
   }
   for (const a of snapshot.teacher_assignments) {
@@ -115,15 +121,29 @@ export async function restoreTeachersSnapshot(client, ownerId, snapshot) {
   }
   for (const n of snapshot.notes) {
     await client.query(
-      'insert into notes (id, owner_id, project_id, teacher_id, note_text, created_at) overriding system value values ($1, $2, $3, $4, $5, $6)',
-      [n.id, ownerId, n.project_id, n.teacher_id, n.note_text, n.created_at]
+      'insert into notes (id, owner_id, project_id, teacher_id, note_text, created_at, workspace_id, list_id, deleted_at) overriding system value values ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+      [n.id, ownerId, n.project_id, n.teacher_id, n.note_text, n.created_at, n.workspace_id ?? null, n.list_id ?? null, n.deleted_at ?? null]
     );
   }
   for (const sr of snapshot.send_records) {
     await client.query(
-      `insert into send_records (id, owner_id, assignment_id, template_id, group_id, project_id, recipient_field, generated_at, opened_at, status)
-       overriding system value values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [sr.id, ownerId, sr.assignment_id, sr.template_id, sr.group_id, sr.project_id, sr.recipient_field, sr.generated_at, sr.opened_at, sr.status]
+      `insert into send_records (id, owner_id, assignment_id, template_id, group_id, project_id, recipient_field, generated_at, opened_at, status, workspace_id, list_id)
+       overriding system value values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [sr.id, ownerId, sr.assignment_id, sr.template_id, sr.group_id, sr.project_id, sr.recipient_field, sr.generated_at, sr.opened_at, sr.status, sr.workspace_id ?? null, sr.list_id ?? null]
+    );
+  }
+  // Older snapshots (taken before workspaces existed) have no such keys.
+  for (const wp of snapshot.workspace_people || []) {
+    await client.query(
+      'insert into workspace_people (owner_id, workspace_id, teacher_id, added_at) values ($1, $2, $3, $4) on conflict do nothing',
+      [ownerId, wp.workspace_id, wp.teacher_id, wp.added_at]
+    );
+  }
+  for (const lm of snapshot.list_members || []) {
+    await client.query(
+      `insert into list_members (owner_id, list_id, teacher_id, assignment_id, status, status_updated_at, added_at)
+       values ($1, $2, $3, $4, $5, $6, $7) on conflict do nothing`,
+      [ownerId, lm.list_id, lm.teacher_id, lm.assignment_id, lm.status, lm.status_updated_at, lm.added_at]
     );
   }
 }

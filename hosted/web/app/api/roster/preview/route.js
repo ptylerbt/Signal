@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { getActingContext, withActingClient } from '../../../../lib/authContext.js';
 import { mapRow, isBlank } from '../../../../lib/roster.js';
 import { findExistingAssignment } from '../../../../lib/rosterImport.js';
+import { getCurrentWorkspace } from '../../../../lib/workspaces.js';
 
 export async function POST(request) {
   const ctx = await getActingContext();
@@ -19,6 +20,7 @@ export async function POST(request) {
   const rows = [];
 
   await withActingClient(ctx, async (client) => {
+    const workspace = await getCurrentWorkspace(client, userId);
     for (const sheetName of workbook.SheetNames) {
       const sheet = workbook.Sheets[sheetName];
       const sheetRows = XLSX.utils.sheet_to_json(sheet, { defval: null });
@@ -31,7 +33,7 @@ export async function POST(request) {
           ...fields,
           district: sheetName,
           source_sheet: sheetName,
-          isDuplicate: await findExistingAssignment(client, userId, fields),
+          isDuplicate: await findExistingAssignment(client, userId, fields, workspace.id),
         });
       }
     }
