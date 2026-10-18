@@ -2,7 +2,8 @@ import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/
 import { NextResponse } from 'next/server';
 
 // Sign-in/sign-up pages must stay public, everything else requires a signed-in user.
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/not-authorized']);
+// /privacy is public because Google's sign-in consent screen links to it.
+const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/not-authorized', '/privacy']);
 
 // Free-tier substitute for Clerk's (paid) sign-up allowlist: anyone can
 // technically create an account, but only these emails are let past

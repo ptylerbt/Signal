@@ -2147,6 +2147,24 @@ html[data-contrast="high"] .signal-content .signal-help-pop {
   border-radius: var(--radius-sm);
 }
 
+/* ---------- Privacy policy ---------- */
+.signal-legal {
+  max-width: 760px;
+  line-height: 1.6;
+}
+.signal-legal h2 {
+  margin: 28px 0 8px;
+  font-size: 1.25rem;
+  color: #1F3864;
+}
+.signal-legal p,
+.signal-legal li {
+  font-size: 1.05rem;
+}
+.signal-legal ul {
+  padding-left: 1.3em;
+}
+
 /* ---------- Calendar page ---------- */
 .signal-calendar-page {
   max-width: 900px;
