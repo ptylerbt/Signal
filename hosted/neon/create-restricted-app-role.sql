@@ -11,7 +11,8 @@
 --
 -- Run this once in Neon's SQL Editor.
 
-create role signal_app with login password 'u2C-UNcFRzHDvaa5NcWhN2D--AbBaJ-q';
+-- Password intentionally not stored here. Pick your own when running this.
+create role signal_app with login password '<choose-a-strong-password>';
 
 grant usage on schema public to signal_app;
 
