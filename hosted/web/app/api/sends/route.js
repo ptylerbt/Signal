@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getActingContext, withActingClient } from '../../../lib/authContext.js';
+import { getCurrentWorkspace } from '../../../lib/workspaces.js';
 
 export async function POST(request) {
   const ctx = await getActingContext();
@@ -13,11 +14,12 @@ export async function POST(request) {
 
   await withActingClient(ctx, async (client) => {
     const now = new Date().toISOString();
+    const workspace = await getCurrentWorkspace(client, userId);
     for (const record of records) {
       await client.query(
         `insert into send_records
-           (owner_id, assignment_id, template_id, group_id, project_id, recipient_field, generated_at, opened_at, status)
-         values ($1, $2, $3, $4, $5, $6, $7, $7, 'opened_in_mail_client')`,
+           (owner_id, assignment_id, template_id, group_id, project_id, recipient_field, generated_at, opened_at, status, workspace_id, list_id)
+         values ($1, $2, $3, $4, $5, $6, $7, $7, 'opened_in_mail_client', $8, $9)`,
         [
           userId,
           record.assignmentId,
@@ -26,6 +28,8 @@ export async function POST(request) {
           record.projectId ?? null,
           record.recipientField || 'to',
           now,
+          workspace.id,
+          record.listId ?? null,
         ]
       );
 

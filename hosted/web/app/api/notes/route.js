@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getActingContext, withActingClient } from '../../../lib/authContext.js';
+import { getCurrentWorkspace } from '../../../lib/workspaces.js';
 
 export async function GET() {
   const ctx = await getActingContext();
@@ -33,9 +34,10 @@ export async function POST(request) {
   }
 
   const note = await withActingClient(ctx, async (client) => {
+    const workspace = await getCurrentWorkspace(client, userId);
     const { rows } = await client.query(
-      'insert into notes (owner_id, project_id, teacher_id, note_text) values ($1, $2, $3, $4) returning *',
-      [userId, projectId || null, teacherId || null, noteText.trim()]
+      'insert into notes (owner_id, project_id, teacher_id, note_text, workspace_id) values ($1, $2, $3, $4, $5) returning *',
+      [userId, projectId || null, teacherId || null, noteText.trim(), workspace.id]
     );
     return rows[0];
   });

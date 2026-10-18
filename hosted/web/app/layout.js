@@ -2,6 +2,7 @@ import { ClerkProvider, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import Sidebar from './components/Sidebar.js';
 import AppearanceEffects from './components/AppearanceEffects.js';
 import ImpersonationBanner from './components/ImpersonationBanner.js';
+import WorkspaceSwitcher from './components/WorkspaceSwitcher.js';
 import { clerkAppearance } from './components/clerkAppearance.js';
 import './globals.css';
 
@@ -26,7 +27,12 @@ export default function RootLayout({ children }) {
             <div className="signal-main">
               <div className="signal-topbar-wrap">
                 <header className="signal-topbar">
-                  <span className="signal-topbar-title">Signal</span>
+                  <SignedIn>
+                    <WorkspaceSwitcher />
+                  </SignedIn>
+                  <SignedOut>
+                    <span className="signal-topbar-title">Signal</span>
+                  </SignedOut>
                   <SignedIn>
                     <UserButton afterSignOutUrl="/sign-in" />
                   </SignedIn>
