@@ -48,7 +48,7 @@ export default function HomePage() {
         <span className="signal-home-write-icon" aria-hidden="true">✉</span>
         <span>
           <span className="signal-home-write-title">Write an email</span>
-          <span className="signal-home-write-sub">Pick who, pick a letter, and it opens in your email app</span>
+          <span className="signal-home-write-sub">Pick who, pick what to send, and it opens in Gmail</span>
         </span>
         <span className="signal-home-write-arrow" aria-hidden="true">→</span>
       </a>

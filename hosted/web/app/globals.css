@@ -1956,6 +1956,35 @@ html[data-contrast="high"] .signal-import-row {
 .signal-done-box .signal-empty-big-title {
   color: #1e6e34;
 }
+.signal-mail-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  color: #555;
+}
+.signal-mail-choice-btn {
+  min-height: 40px;
+  padding: 6px 16px;
+  background: #fff;
+  color: #1F3864;
+  border: 2px solid #dde3ef;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.signal-mail-choice-btn.on {
+  background: #1F3864;
+  color: #fff;
+  border-color: #1F3864;
+}
+.signal-btn-email:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .signal-pick-list-page {
   max-height: 55vh;
 }

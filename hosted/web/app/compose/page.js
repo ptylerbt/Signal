@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { buildMailtoUrl, buildAnnouncementMailtoUrl } from '../../lib/mailto.js';
+import { buildMailtoUrl, buildAnnouncementMailtoUrl, buildGmailComposeUrl, GMAIL_URL_LIMIT } from '../../lib/mailto.js';
 import HelpBubble from '../components/HelpBubble.js';
 
 // Write Email, as a 3-step wizard: Who → What → Check & send.
-// Nothing is ever sent from here: each step ends by opening her own email
-// app with the message ready, and she presses Send there.
+// Nothing is ever sent from here: each step ends by opening Gmail in a new
+// tab (or, if she prefers, her email app) with the message ready, and she
+// presses Send there.
+
+// Remembered per browser; Gmail unless she switches.
+const MAIL_APP_KEY = 'signal_mail_app';
 
 const STEPS = ['Who', 'What', 'Check & send'];
 
@@ -14,6 +18,9 @@ export default function ComposePage() {
   const [step, setStep] = useState(1);
   const [lists, setLists] = useState(null);
   const [signature, setSignature] = useState('');
+  const [account, setAccount] = useState(''); // her email, so Gmail opens the right account
+  const [mailApp, setMailApp] = useState('gmail'); // 'gmail' | 'app'
+  const [blockedUrl, setBlockedUrl] = useState(null); // set if the browser blocked the new tab
 
   // Who
   const [source, setSource] = useState(null); // { kind: 'list', list } | { kind: 'people' }
@@ -37,7 +44,18 @@ export default function ComposePage() {
 
   useEffect(() => {
     fetch('/api/lists').then((r) => (r.ok ? r.json() : [])).then(setLists).catch(() => setLists([]));
-    fetch('/api/settings').then((r) => r.ok && r.json()).then((d) => d?.defaultSignature && setSignature(d.defaultSignature)).catch(() => {});
+    fetch('/api/settings')
+      .then((r) => r.ok && r.json())
+      .then((d) => {
+        if (d?.defaultSignature) setSignature(d.defaultSignature);
+        if (d?.email) setAccount(d.email);
+      })
+      .catch(() => {});
+    try {
+      if (localStorage.getItem(MAIL_APP_KEY) === 'app') setMailApp('app');
+    } catch {
+      // Storage unavailable; stay on Gmail.
+    }
 
     // Arrived from a list's "Email this list" button: start at step 2.
     const listId = new URLSearchParams(window.location.search).get('list');
@@ -153,27 +171,55 @@ export default function ComposePage() {
     }
   }
 
+  function chooseMailApp(next) {
+    setMailApp(next);
+    setBlockedUrl(null);
+    try {
+      localStorage.setItem(MAIL_APP_KEY, next);
+    } catch {
+      // Not remembered; fine.
+    }
+  }
+
+  // Opens the email. Gmail goes in a NEW tab so Signal stays open behind it
+  // for the next step. The tab must open straight from the click (before
+  // any awaiting), or the browser treats it as a pop-up and blocks it.
+  function openEmail({ to = [], bcc = [], subject: su, body: text }) {
+    setBlockedUrl(null);
+    if (mailApp === 'app') {
+      window.location.href =
+        to.length === 1 && bcc.length === 0
+          ? buildMailtoUrl(to[0], su, text)
+          : buildAnnouncementMailtoUrl({ to, bcc, subject: su, body: text });
+      return;
+    }
+    const url = buildGmailComposeUrl({ to, bcc, subject: su, body: text, account });
+    const tab = window.open(url, '_blank');
+    if (!tab) setBlockedUrl(url);
+  }
+
+  const field = showAddresses ? 'to' : 'bcc';
+  const finalBody = signature ? `${body}\n\n${signature}` : body;
+  const messageEmails = withEmail.map((r) => r.email);
+  const messageTo = field === 'to' ? messageEmails : [];
+  const messageBcc = field === 'bcc' ? messageEmails : [];
+  const messageTooLong =
+    mailApp === 'gmail' &&
+    buildGmailComposeUrl({ to: messageTo, bcc: messageBcc, subject, body: finalBody, account }).length > GMAIL_URL_LIMIT;
+
   async function openMessage() {
-    const field = showAddresses ? 'to' : 'bcc';
-    const emails = withEmail.map((r) => r.email);
-    const finalBody = signature ? `${body}\n\n${signature}` : body;
-    const url = buildAnnouncementMailtoUrl({
-      to: field === 'to' ? emails : [],
-      bcc: field === 'bcc' ? emails : [],
-      subject,
-      body: finalBody,
-    });
-    await recordSends(withEmail.map((r) => ({ assignmentId: r.assignmentId, listId, recipientField: field })));
+    openEmail({ to: messageTo, bcc: messageBcc, subject, body: finalBody });
     setMessageOpened(true);
-    window.location.href = url;
+    await recordSends(withEmail.map((r) => ({ assignmentId: r.assignmentId, listId, recipientField: field })));
   }
 
   async function openLetter(letter) {
-    const url = buildMailtoUrl(letter.email, subject, letter.filledText);
-    await recordSends([{ assignmentId: letter.assignmentId, templateId: template.id, listId, recipientField: 'to' }]);
+    openEmail({ to: [letter.email], subject, body: letter.filledText });
     setOpened((prev) => new Set(prev).add(letter.assignmentId));
-    window.location.href = url;
+    await recordSends([{ assignmentId: letter.assignmentId, templateId: template.id, listId, recipientField: 'to' }]);
   }
+
+  const appName = mailApp === 'gmail' ? 'Gmail' : 'your email app';
 
   function startOver() {
     window.location.href = '/compose';
@@ -185,7 +231,7 @@ export default function ComposePage() {
     <div className="signal-home signal-wizard">
       <div className="signal-title-row">
         <h1 className="signal-home-title">Write an email</h1>
-        <HelpBubble text="Three steps: pick who, pick what to send, then check it. Signal never sends anything by itself. It opens your email app, and you press Send there." />
+        <HelpBubble text="Three steps: pick who, pick what to send, then check it. Signal never sends anything by itself. It opens the email in Gmail, and you press Send there." />
       </div>
       <ol className="signal-steps" aria-label="Steps">
         {STEPS.map((label, i) => (
@@ -338,13 +384,28 @@ export default function ComposePage() {
               {withoutEmail.length > 0 && (
                 <p className="signal-home-sub">{withoutEmail.length} {withoutEmail.length === 1 ? 'person has' : 'people have'} no email and will be skipped: {withoutEmail.map((r) => r.name).join(', ')}.</p>
               )}
+              {messageTooLong && (
+                <p className="signal-modal-error" role="alert">
+                  This email is too long for Gmail to open in one go. Make the message shorter, or choose “my email app” below.
+                </p>
+              )}
               <div className="signal-wizard-nav">
                 <button type="button" className="signal-btn-ghost" onClick={() => setStep(2)}>← Back to change it</button>
-                <button type="button" className="signal-btn-email signal-btn-next" onClick={openMessage}>✉ Open in my email app</button>
+                <button type="button" className="signal-btn-email signal-btn-next" onClick={openMessage} disabled={messageTooLong}>✉ Open in {mailApp === 'gmail' ? 'Gmail' : 'my email app'}</button>
               </div>
+              <MailAppChoice mailApp={mailApp} onChange={chooseMailApp} />
             </>
           ) : (
-            <DoneBox onAgain={startOver} onReopen={openMessage} text="Your email app should now be open with the message ready. Check it, then press Send there." />
+            <>
+              <BlockedTab url={blockedUrl} />
+              <DoneBox
+                onAgain={startOver}
+                onReopen={openMessage}
+                text={mailApp === 'gmail'
+                  ? 'Gmail opened in a new tab with your message ready. Check it, press Send there, then come back to this tab.'
+                  : 'Your email app should now be open with the message ready. Check it, then press Send there.'}
+              />
+            </>
           )}
         </section>
       )}
@@ -364,14 +425,20 @@ export default function ComposePage() {
 
           {nextLetter ? (
             <div className="signal-next-box">
-              <p className="signal-home-sub">Press the button, check the email in your email app, press Send there, then come back here for the next one.</p>
+              <p className="signal-home-sub">
+                {mailApp === 'gmail'
+                  ? 'Press the button. Gmail opens in a new tab with the email ready. Press Send there, close that tab, and come back here for the next one.'
+                  : 'Press the button, check the email in your email app, press Send there, then come back here for the next one.'}
+              </p>
               <button type="button" className="signal-btn-email signal-btn-next" onClick={() => openLetter(nextLetter)}>
                 ✉ Open email to {nextLetter.name || nextLetter.email}
               </button>
+              <MailAppChoice mailApp={mailApp} onChange={chooseMailApp} />
             </div>
           ) : (
-            <DoneBox onAgain={startOver} text={`All ${letters.length} emails have been opened in your email app. Make sure you pressed Send on each one.`} />
+            <DoneBox onAgain={startOver} text={`All ${letters.length} emails have been opened in ${appName}. Make sure you pressed Send on each one.`} />
           )}
+          <BlockedTab url={blockedUrl} />
 
           {withoutEmail.length > 0 && (
             <p className="signal-home-sub">Skipped (no email): {withoutEmail.map((r) => r.name).join(', ')}.</p>
@@ -404,6 +471,35 @@ export default function ComposePage() {
           )}
         </section>
       )}
+    </div>
+  );
+}
+
+// Small switch under the Open button: Gmail (in the browser) or the
+// computer's own email app. Remembered for next time.
+function MailAppChoice({ mailApp, onChange }) {
+  return (
+    <p className="signal-mail-choice">
+      Opens in:{' '}
+      <button type="button" className={`signal-mail-choice-btn${mailApp === 'gmail' ? ' on' : ''}`} onClick={() => onChange('gmail')} aria-pressed={mailApp === 'gmail'}>
+        Gmail
+      </button>
+      <button type="button" className={`signal-mail-choice-btn${mailApp === 'app' ? ' on' : ''}`} onClick={() => onChange('app')} aria-pressed={mailApp === 'app'}>
+        My email app
+      </button>
+    </p>
+  );
+}
+
+// If the browser blocked the new Gmail tab, give her a plain link to click.
+function BlockedTab({ url }) {
+  if (!url) return null;
+  return (
+    <div className="signal-next-box" role="alert">
+      <p className="signal-home-sub">Your browser stopped Gmail from opening by itself. Press this button to open it:</p>
+      <a href={url} target="_blank" rel="noopener noreferrer" className="signal-btn-email signal-btn-link">
+        ✉ Open Gmail
+      </a>
     </div>
   );
 }
