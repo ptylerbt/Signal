@@ -10,20 +10,22 @@ export function buildMailtoUrl(email, subject, body) {
   return `mailto:${encodeURIComponent(email)}${query ? `?${query}` : ''}`;
 }
 
-// Gmail's own "compose" page, opened in a browser tab with everything filled
-// in. `account` (an email address) picks which signed-in Google account it
-// opens in, so someone signed into several accounts lands in the right one.
+// Opens Gmail in a browser tab with a new message filled in. This goes
+// through Gmail's own handler for email links (extsrc=mailto), which shows
+// the normal Gmail screen with the message docked over the inbox, so the
+// account's name and picture are visible. The full-screen compose view
+// (view=cm&fs=1) hides them. `account` (an email address) picks which
+// signed-in Google account it opens in.
 export function buildGmailComposeUrl({ to, cc, bcc, subject, body, account }) {
-  const query = encodeMailtoQuery({
-    view: 'cm',
-    fs: '1',
-    to: (to || []).join(','),
+  const recipients = (to || []).map(encodeURIComponent).join(',');
+  const extra = encodeMailtoQuery({
     cc: (cc || []).join(','),
     bcc: (bcc || []).join(','),
-    su: subject,
+    subject,
     body,
-    authuser: account,
   });
+  const mailto = `mailto:${recipients}${extra ? `?${extra}` : ''}`;
+  const query = encodeMailtoQuery({ authuser: account, extsrc: 'mailto', url: mailto });
   return `https://mail.google.com/mail/?${query}`;
 }
 

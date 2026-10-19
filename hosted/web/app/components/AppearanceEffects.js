@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 
-const BASE_FONT_PX = 18;
+const BASE_FONT_PX = 16;
 
 // Applies the signed-in user's saved accessibility settings (font scale,
 // high contrast) to the whole document. Renders nothing — just an effect.

@@ -11,6 +11,8 @@ import HelpBubble from '../components/HelpBubble.js';
 
 // Remembered per browser; Gmail unless she switches.
 const MAIL_APP_KEY = 'signal_mail_app';
+// Which Gmail account to open, if not the one she signs into Signal with.
+const GMAIL_ACCOUNT_KEY = 'signal_gmail_account';
 
 const STEPS = ['Who', 'What', 'Check & send'];
 
@@ -48,7 +50,14 @@ export default function ComposePage() {
       .then((r) => r.ok && r.json())
       .then((d) => {
         if (d?.defaultSignature) setSignature(d.defaultSignature);
-        if (d?.email) setAccount(d.email);
+        let saved = null;
+        try {
+          saved = localStorage.getItem(GMAIL_ACCOUNT_KEY);
+        } catch {
+          // Storage unavailable; use the sign-in email.
+        }
+        if (saved) setAccount(saved);
+        else if (d?.email) setAccount(d.email);
       })
       .catch(() => {});
     try {
@@ -176,6 +185,16 @@ export default function ComposePage() {
     setBlockedUrl(null);
     try {
       localStorage.setItem(MAIL_APP_KEY, next);
+    } catch {
+      // Not remembered; fine.
+    }
+  }
+
+  function chooseAccount(email) {
+    setAccount(email);
+    setBlockedUrl(null);
+    try {
+      localStorage.setItem(GMAIL_ACCOUNT_KEY, email);
     } catch {
       // Not remembered; fine.
     }
@@ -393,7 +412,7 @@ export default function ComposePage() {
                 <button type="button" className="signal-btn-ghost" onClick={() => setStep(2)}>← Back to change it</button>
                 <button type="button" className="signal-btn-email signal-btn-next" onClick={openMessage} disabled={messageTooLong}>✉ Open in {mailApp === 'gmail' ? 'Gmail' : 'my email app'}</button>
               </div>
-              <MailAppChoice mailApp={mailApp} onChange={chooseMailApp} />
+              <MailAppChoice mailApp={mailApp} onChange={chooseMailApp} account={account} onChangeAccount={chooseAccount} />
             </>
           ) : (
             <>
@@ -433,7 +452,7 @@ export default function ComposePage() {
               <button type="button" className="signal-btn-email signal-btn-next" onClick={() => openLetter(nextLetter)}>
                 ✉ Open email to {nextLetter.name || nextLetter.email}
               </button>
-              <MailAppChoice mailApp={mailApp} onChange={chooseMailApp} />
+              <MailAppChoice mailApp={mailApp} onChange={chooseMailApp} account={account} onChangeAccount={chooseAccount} />
             </div>
           ) : (
             <DoneBox onAgain={startOver} text={`All ${letters.length} emails have been opened in ${appName}. Make sure you pressed Send on each one.`} />
@@ -477,17 +496,63 @@ export default function ComposePage() {
 
 // Small switch under the Open button: Gmail (in the browser) or the
 // computer's own email app. Remembered for next time.
-function MailAppChoice({ mailApp, onChange }) {
+function MailAppChoice({ mailApp, onChange, account, onChangeAccount }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [error, setError] = useState('');
+
+  function save(e) {
+    e.preventDefault();
+    const email = draft.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Type the full Gmail address, like name@gmail.com.');
+      return;
+    }
+    onChangeAccount(email);
+    setEditing(false);
+    setError('');
+  }
+
   return (
-    <p className="signal-mail-choice">
-      Opens in:{' '}
-      <button type="button" className={`signal-mail-choice-btn${mailApp === 'gmail' ? ' on' : ''}`} onClick={() => onChange('gmail')} aria-pressed={mailApp === 'gmail'}>
-        Gmail
-      </button>
-      <button type="button" className={`signal-mail-choice-btn${mailApp === 'app' ? ' on' : ''}`} onClick={() => onChange('app')} aria-pressed={mailApp === 'app'}>
-        My email app
-      </button>
-    </p>
+    <div className="signal-mail-choice-wrap">
+      {mailApp === 'gmail' && !editing && (
+        <p className="signal-sends-from">
+          Sends from: <strong>{account || 'your Gmail'}</strong>{' '}
+          <button type="button" className="signal-link-btn" onClick={() => { setDraft(account); setEditing(true); }}>
+            Change
+          </button>
+        </p>
+      )}
+      {mailApp === 'gmail' && editing && (
+        <form className="signal-sends-from-form" onSubmit={save}>
+          <label className="signal-field-label" htmlFor="gmail-account">Which Gmail account should this send from?</label>
+          <input
+            id="gmail-account"
+            type="email"
+            className="signal-big-input"
+            value={draft}
+            onChange={(e) => { setDraft(e.target.value); setError(''); }}
+            placeholder="name@gmail.com"
+            autoFocus
+          />
+          <p className="signal-check-sub">You need to be signed into that account in this browser. Signal will remember it on this computer.</p>
+          {error && <p className="signal-modal-error" role="alert">{error}</p>}
+          <div className="signal-people-actions" style={{ marginTop: 10, marginBottom: 0 }}>
+            <button type="submit" className="signal-btn-primary signal-btn-small">Use this account</button>
+            <button type="button" className="signal-btn-ghost signal-btn-small" onClick={() => setEditing(false)}>Cancel</button>
+          </div>
+        </form>
+      )}
+      <p className="signal-mail-choice">
+        Opens in:{' '}
+        <button type="button" className={`signal-mail-choice-btn${mailApp === 'gmail' ? ' on' : ''}`} onClick={() => onChange('gmail')} aria-pressed={mailApp === 'gmail'}>
+          Gmail
+        </button>
+        <button type="button" className={`signal-mail-choice-btn${mailApp === 'app' ? ' on' : ''}`} onClick={() => onChange('app')} aria-pressed={mailApp === 'app'}>
+          My email app
+        </button>
+      </p>
+    </div>
   );
 }
 

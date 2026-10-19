@@ -61,7 +61,7 @@ export default function SettingsPage() {
   }
 
   if (!loaded) return;
-    document.documentElement.style.fontSize = `${18 * fontScale}px`;
+    document.documentElement.style.fontSize = `${16 * fontScale}px`;
   }, [fontScale, loaded]);
 
   useEffect(() => {
