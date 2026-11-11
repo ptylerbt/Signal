@@ -2794,3 +2794,182 @@ html[data-contrast="high"] .signal-modal {
     max-height: max(260px, calc(100vh - 510px));
   }
 }
+
+/* Finished wizard steps are clickable to go back. */
+.signal-step:has(.signal-step-btn) {
+  padding: 0;
+}
+.signal-step-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px 8px 8px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.signal-step-btn:hover {
+  background: #d4ecdb;
+  text-decoration: underline;
+}
+
+/* ---------- Write Email, last step: laid out like an email ---------- */
+.signal-mail-wrap {
+  max-width: 980px;
+}
+.signal-mail {
+  background: #fff;
+  border: 2px solid #dde3ef;
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-soft-sm);
+  overflow: hidden;
+}
+.signal-mail-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 60px;
+  padding: 8px 22px;
+  border-bottom: 1px solid #eef1f7;
+}
+.signal-mail-label {
+  flex: 0 0 88px;
+  font-weight: 700;
+  color: #555;
+}
+.signal-mail-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.signal-mail-select,
+.signal-mail-input {
+  font-family: inherit;
+  font-size: 1.1rem;
+  color: #1a1a1a;
+  min-height: 46px;
+  padding: 8px 14px;
+  border: 2px solid #dde3ef;
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+.signal-mail-select {
+  font-weight: 700;
+  color: #1F3864;
+  max-width: 100%;
+  cursor: pointer;
+}
+.signal-mail-input {
+  width: 100%;
+}
+.signal-mail-select:focus,
+.signal-mail-input:focus,
+.signal-mail-textarea:focus {
+  border-color: #1F3864;
+  outline: none;
+}
+.signal-mail-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  background: #eef2fa;
+  color: #1F3864;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.signal-segmented {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: #eef1f7;
+}
+.signal-segmented button {
+  min-height: 40px;
+  padding: 6px 18px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: #1F3864;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.signal-segmented button.on {
+  background: #1F3864;
+  color: #fff;
+}
+.signal-mail-body {
+  padding: 16px 22px 8px;
+}
+.signal-mail-textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  border: 2px solid #dde3ef;
+  border-radius: var(--radius-md);
+  resize: vertical;
+}
+.signal-mail-signature {
+  margin: 8px 2px 0;
+  font-family: inherit;
+  font-size: 1rem;
+  color: #666;
+  white-space: pre-wrap;
+}
+.signal-mail-attach {
+  padding: 0 22px 14px;
+}
+.signal-mail-attach .signal-attach {
+  margin-top: 6px;
+}
+.signal-mail-attach .signal-attach-btn {
+  min-height: 42px;
+  padding: 8px 18px;
+  font-size: 1rem;
+}
+.signal-mail-footer {
+  padding: 16px 22px;
+  background: #f6f8fc;
+  border-top: 1px solid #eef1f7;
+}
+.signal-mail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+.signal-mail-back {
+  margin-left: auto;
+}
+.signal-mail-note {
+  margin: 0 0 12px;
+}
+.signal-mail .signal-letter-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+@media (max-width: 600px) {
+  .signal-mail-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .signal-mail-label {
+    flex-basis: auto;
+  }
+  .signal-mail-back {
+    margin-left: 0;
+  }
+}

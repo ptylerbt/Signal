@@ -266,6 +266,13 @@ export default function ComposePage() {
     setConfirming(false);
   }
 
+  function goToStep(n) {
+    setError('');
+    setConfirming(false);
+    if (n === 1) setPicking(false);
+    setStep(n);
+  }
+
   function startOver() {
     window.location.href = '/compose';
   }
@@ -283,12 +290,27 @@ export default function ComposePage() {
         <HelpBubble text="Three steps: pick who, pick what to send, then check it. Nothing is sent until you press the Send button on the last step." />
       </div>
       <ol className="signal-steps" aria-label="Steps">
-        {STEPS.map((label, i) => (
-          <li key={label} className={`signal-step${step === i + 1 ? ' current' : ''}${step > i + 1 ? ' done' : ''}`} aria-current={step === i + 1 ? 'step' : undefined}>
-            <span className="signal-step-num">{step > i + 1 ? '✓' : i + 1}</span>
-            <span className="signal-step-label">{label}</span>
-          </li>
-        ))}
+        {STEPS.map((label, i) => {
+          const done = step > i + 1;
+          const inner = (
+            <>
+              <span className="signal-step-num">{done ? '✓' : i + 1}</span>
+              <span className="signal-step-label">{label}</span>
+            </>
+          );
+          return (
+            <li key={label} className={`signal-step${step === i + 1 ? ' current' : ''}${done ? ' done' : ''}`} aria-current={step === i + 1 ? 'step' : undefined}>
+              {/* Finished steps are buttons: click one to go back and change it. */}
+              {done && !result && !sending ? (
+                <button type="button" className="signal-step-btn" onClick={() => goToStep(i + 1)} title={`Go back to ${label}`}>
+                  {inner}
+                </button>
+              ) : (
+                inner
+              )}
+            </li>
+          );
+        })}
       </ol>
 
       <GmailResult result={gmailResult} />
@@ -418,159 +440,175 @@ export default function ComposePage() {
       )}
 
       {step === 3 && !result && (
-        <section aria-labelledby="check-title">
+        <section aria-labelledby="check-title" className="signal-mail-wrap">
           <h2 id="check-title" className="signal-wizard-question">
             Check your email{' '}
-            <HelpBubble text="You can still change anything on this page. Nothing is sent until you press the big Send button." />
+            <HelpBubble text="You can still change anything here. Nothing is sent until you press Send." />
           </h2>
 
-          <div className="signal-split">
-          <div className="signal-split-col">
-          {/* From */}
-          <div className="signal-send-section">
-            <h3 className="signal-send-label">Send from</h3>
-            {gmail === null && <p className="signal-home-sub">Loading your Gmail accounts…</p>}
-            {noAccounts && <NoAccountBox onAdd={addAccount} />}
-            {gmail && gmail.accounts.length > 0 && (
-              <div className="signal-from-choices" role="radiogroup" aria-label="Send from">
-                {gmail.accounts.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={Number(a.id) === accountId}
-                    className={`signal-from-choice${Number(a.id) === accountId ? ' selected' : ''}`}
-                    onClick={() => setAccountId(Number(a.id))}
+          {/* Laid out like an email: From, To, Subject, message, then Send. */}
+          <div className="signal-mail">
+            <div className="signal-mail-row">
+              <label className="signal-mail-label" htmlFor="c-from">From</label>
+              <div className="signal-mail-field">
+                {gmail === null && <span className="signal-person-meta">Loading…</span>}
+                {gmail && gmail.accounts.length > 0 && (
+                  <select
+                    id="c-from"
+                    className="signal-mail-select"
+                    value={accountId ?? ''}
+                    onChange={(e) => setAccountId(Number(e.target.value))}
                   >
-                    <span className="signal-from-dot" aria-hidden="true">{Number(a.id) === accountId ? '●' : '○'}</span>
-                    {a.email}
-                  </button>
-                ))}
-                <button type="button" className="signal-link-btn" onClick={addAccount}>＋ Add another Gmail account</button>
-              </div>
-            )}
-          </div>
-
-          {/* What (still editable) */}
-          {mode === 'message' && (
-            <div className="signal-send-section">
-              <h3 className="signal-send-label">Your message <span className="signal-send-hint">(you can still change it)</span></h3>
-              <MessageFields subject={subject} setSubject={setSubject} body={body} setBody={setBody} signature={signature} />
-              <Attachments files={attachments} onChange={setAttachments} />
-            </div>
-          )}
-
-          {mode === 'letter' && (
-            <div className="signal-send-section">
-              <h3 className="signal-send-label">Your letters <span className="signal-send-hint">(you can still change them)</span></h3>
-              <label className="signal-field-label" htmlFor="l-subject">Subject (same for everyone)</label>
-              <input id="l-subject" className="signal-big-input" value={subject} onChange={(e) => setSubject(e.target.value)} />
-              <ul className="signal-letter-list">
-                {letters.map((l) => (
-                  <li key={l.assignmentId} className="signal-letter-card">
-                    <details>
-                      <summary>
-                        <span className="signal-person-name">{l.name}</span> <span className="signal-person-meta">{l.email}</span>
-                      </summary>
-                      <textarea
-                        className="signal-notes-input signal-message-input"
-                        rows={10}
-                        aria-label={`Letter to ${l.name}`}
-                        value={l.filledText}
-                        onChange={(e) => updateLetter(l.assignmentId, e.target.value)}
-                      />
-                    </details>
-                  </li>
-                ))}
-              </ul>
-              <Attachments files={attachments} onChange={setAttachments} />
-            </div>
-          )}
-
-          </div>
-          <div className="signal-split-col">
-          {/* How (messages only) */}
-          {mode === 'message' && withEmail.length > 1 && (
-            <div className="signal-send-section">
-              <h3 className="signal-send-label">How should it go out?</h3>
-              <div className="signal-choice-cards signal-choice-two">
-                <button type="button" className={`signal-choice-card${delivery === 'separate' ? ' selected' : ''}`} onClick={() => setDelivery('separate')} aria-pressed={delivery === 'separate'}>
-                  <span className="signal-choice-icon" aria-hidden="true">✉</span>
-                  <span className="signal-choice-text">
-                    <span className="signal-choice-title">A separate email to each person</span>
-                    <span className="signal-choice-sub">Each person gets their own email. Nobody sees the others.</span>
-                  </span>
-                </button>
-                <button type="button" className={`signal-choice-card${delivery === 'bcc' ? ' selected' : ''}`} onClick={() => setDelivery('bcc')} aria-pressed={delivery === 'bcc'}>
-                  <span className="signal-choice-icon" aria-hidden="true">👥</span>
-                  <span className="signal-choice-text">
-                    <span className="signal-choice-title">One email, everyone hidden</span>
-                    <span className="signal-choice-sub">One email with everyone in Bcc. Nobody sees the others.</span>
-                  </span>
-                </button>
+                    {gmail.accounts.map((a) => (
+                      <option key={a.id} value={Number(a.id)}>{a.email}</option>
+                    ))}
+                  </select>
+                )}
+                {noAccounts ? (
+                  <>
+                    <span className="signal-who-warn">No Gmail account yet. Call Tyler, or add one yourself.</span>
+                    <button type="button" className="signal-btn-primary signal-btn-small" onClick={addAccount}>＋ Add a Gmail account</button>
+                  </>
+                ) : (
+                  <button type="button" className="signal-link-btn" onClick={addAccount}>＋ Add account</button>
+                )}
               </div>
             </div>
-          )}
 
-          {withoutEmail.length > 0 && (
-            <p className="signal-home-sub">
-              {withoutEmail.length} {withoutEmail.length === 1 ? 'person has' : 'people have'} no email and will be skipped: {withoutEmail.map((r) => r.name).join(', ')}.
-            </p>
-          )}
+            <div className="signal-mail-row">
+              <span className="signal-mail-label">To</span>
+              <div className="signal-mail-field">
+                <span className="signal-mail-chip">
+                  {source?.kind === 'list' ? `${source.list.name} · ` : ''}{countText}
+                </span>
+                <button type="button" className="signal-link-btn" onClick={() => setStep(1)}>Change</button>
+                {withoutEmail.length > 0 && (
+                  <span className="signal-who-warn">
+                    {withoutEmail.length} without an email will be skipped
+                  </span>
+                )}
+              </div>
+            </div>
 
-          {/* Send */}
-          <div className="signal-send-box">
-            {practice ? (
-              <p className="signal-send-summary">
-                🧪 This is Practice. The email goes <strong>only to you</strong>
-                {account ? <> at <strong>{account.email}</strong></> : null}, so you can see how it looks. Nobody else gets it.
-              </p>
-            ) : (
-              <p className="signal-send-summary">
-                This will send to <strong>{countText}</strong>
-                {source?.kind === 'list' ? <> on <strong>“{source.list.name}”</strong></> : null}
-                {account ? <> from <strong>{account.email}</strong></> : null}.
-              </p>
-            )}
-
-            {testResult && (
-              <p className="signal-gmail-result good" role="status">
-                ✓ A {testResult.practice ? 'practice' : 'test'} email was sent to {testResult.from}. Check that inbox to see how it looks.
-              </p>
-            )}
-
-            {practice ? (
-              <button type="button" className="signal-btn-email signal-send-btn" onClick={() => send(true)} disabled={!account || !!sending}>
-                {sending ? 'Sending…' : '✉ Send practice email to me'}
-              </button>
-            ) : confirming ? (
-              <div className="signal-send-confirm" role="alertdialog" aria-label="Send now?">
-                <p className="signal-send-confirm-text">Send this email to {countText} now?</p>
-                <div className="signal-people-actions">
-                  <button type="button" className="signal-btn-email signal-send-btn" onClick={() => send(false)} disabled={!!sending} autoFocus>
-                    {sending === 'real' ? `Sending to ${countText}…` : 'Yes, send it now'}
-                  </button>
-                  <button type="button" className="signal-btn-ghost" onClick={() => setConfirming(false)} disabled={!!sending}>
-                    No, go back
-                  </button>
+            {mode === 'message' && withEmail.length > 1 && (
+              <div className="signal-mail-row">
+                <span className="signal-mail-label">Send as</span>
+                <div className="signal-mail-field">
+                  <div className="signal-segmented" role="radiogroup" aria-label="Send as">
+                    <button type="button" role="radio" aria-checked={delivery === 'separate'} className={delivery === 'separate' ? 'on' : ''} onClick={() => setDelivery('separate')}>
+                      Separate emails
+                    </button>
+                    <button type="button" role="radio" aria-checked={delivery === 'bcc'} className={delivery === 'bcc' ? 'on' : ''} onClick={() => setDelivery('bcc')}>
+                      One email (Bcc)
+                    </button>
+                  </div>
+                  <HelpBubble text="Separate emails: each person gets their own email. One email (Bcc): a single email with everyone hidden. Either way, nobody sees the other addresses." />
                 </div>
               </div>
-            ) : (
-              <>
-                <button type="button" className="signal-btn-email signal-send-btn" onClick={() => { setError(''); setConfirming(true); }} disabled={!account || !!sending}>
-                  ✉ Send to {countText}
-                </button>
-                <button type="button" className="signal-link-btn signal-send-test" onClick={() => send(true)} disabled={!account || !!sending}>
-                  {sending === 'test' ? 'Sending a test…' : 'Send a test to myself first'}
-                </button>
-              </>
             )}
-          </div>
 
-          <div className="signal-wizard-nav">
-            <button type="button" className="signal-btn-ghost" onClick={() => setStep(2)} disabled={!!sending}>← Back</button>
-          </div>
-          </div>
+            <div className="signal-mail-row">
+              <label className="signal-mail-label" htmlFor="c-subject3">Subject</label>
+              <div className="signal-mail-field">
+                <input
+                  id="c-subject3"
+                  className="signal-mail-input"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder={mode === 'letter' ? 'Same subject for everyone' : 'Subject'}
+                />
+              </div>
+            </div>
+
+            {mode === 'message' && (
+              <div className="signal-mail-body">
+                <label htmlFor="c-body3" className="signal-visually-hidden">Message</label>
+                <textarea
+                  id="c-body3"
+                  className="signal-mail-textarea"
+                  rows={8}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="Type your message…"
+                />
+                {signature && <pre className="signal-mail-signature">{signature}</pre>}
+              </div>
+            )}
+
+            {mode === 'letter' && (
+              <div className="signal-mail-body">
+                <p className="signal-person-meta" style={{ margin: '0 0 8px' }}>
+                  Each person gets their own letter. Click a name to read or change it.
+                </p>
+                <ul className="signal-letter-list">
+                  {letters.map((l) => (
+                    <li key={l.assignmentId} className="signal-letter-card">
+                      <details>
+                        <summary>
+                          <span className="signal-person-name">{l.name}</span> <span className="signal-person-meta">{l.email}</span>
+                        </summary>
+                        <textarea
+                          className="signal-mail-textarea"
+                          rows={8}
+                          aria-label={`Letter to ${l.name}`}
+                          value={l.filledText}
+                          onChange={(e) => updateLetter(l.assignmentId, e.target.value)}
+                        />
+                      </details>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="signal-mail-attach">
+              <Attachments files={attachments} onChange={setAttachments} />
+            </div>
+
+            {/* Footer: the one Send button, with test and Back beside it. */}
+            <div className="signal-mail-footer">
+              {testResult && (
+                <p className="signal-gmail-result good signal-mail-note" role="status">
+                  ✓ A {testResult.practice ? 'practice' : 'test'} email was sent to {testResult.from}. Check that inbox to see how it looks.
+                </p>
+              )}
+
+              {practice ? (
+                <>
+                  <p className="signal-mail-note">🧪 This is Practice. The email goes <strong>only to you</strong>. Nobody else gets it.</p>
+                  <div className="signal-mail-actions">
+                    <button type="button" className="signal-btn-email signal-send-btn" onClick={() => send(true)} disabled={!account || !!sending}>
+                      {sending ? 'Sending…' : '✉ Send practice email to me'}
+                    </button>
+                    <button type="button" className="signal-btn-ghost" onClick={() => setStep(2)} disabled={!!sending}>← Back</button>
+                  </div>
+                </>
+              ) : confirming ? (
+                <div className="signal-mail-confirm" role="alertdialog" aria-label="Send now?">
+                  <p className="signal-send-confirm-text">
+                    Send to {countText}{account ? ` from ${account.email}` : ''} now?
+                  </p>
+                  <div className="signal-mail-actions">
+                    <button type="button" className="signal-btn-email signal-send-btn" onClick={() => send(false)} disabled={!!sending} autoFocus>
+                      {sending === 'real' ? `Sending to ${countText}…` : 'Yes, send it now'}
+                    </button>
+                    <button type="button" className="signal-btn-ghost" onClick={() => setConfirming(false)} disabled={!!sending}>
+                      No, go back
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="signal-mail-actions">
+                  <button type="button" className="signal-btn-email signal-send-btn" onClick={() => { setError(''); setConfirming(true); }} disabled={!account || !!sending}>
+                    ✉ Send to {countText}
+                  </button>
+                  <button type="button" className="signal-link-btn" onClick={() => send(true)} disabled={!account || !!sending}>
+                    {sending === 'test' ? 'Sending a test…' : 'Send a test to myself'}
+                  </button>
+                  <button type="button" className="signal-btn-ghost signal-mail-back" onClick={() => setStep(2)} disabled={!!sending}>← Back</button>
+                </div>
+              )}
+            </div>
           </div>
         </section>
       )}
