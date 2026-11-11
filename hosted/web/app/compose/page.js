@@ -18,6 +18,8 @@ const ATTACHMENT_LIMIT = 3 * 1024 * 1024;
 
 export default function ComposePage() {
   const [step, setStep] = useState(1);
+  // The furthest step reached, so the step buttons can jump forward again.
+  const [furthest, setFurthest] = useState(1);
   const [lists, setLists] = useState(null);
   const [signature, setSignature] = useState('');
   const [gmail, setGmail] = useState(null); // { accounts, suggestedId, practice, ready }
@@ -41,11 +43,16 @@ export default function ComposePage() {
 
   // Check & send
   const [delivery, setDelivery] = useState('separate'); // 'separate' | 'bcc'
-  const [letters, setLetters] = useState([]); // [{ assignmentId, name, email, filledText }]
+  const [letters, setLetters] = useState([]);
+  const [lettersKey, setLettersKey] = useState(''); // which letter + people they were filled for // [{ assignmentId, name, email, filledText }]
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState(null); // null | 'test' | 'real'
   const [testResult, setTestResult] = useState(null);
   const [result, setResult] = useState(null); // the response after the real send
+
+  useEffect(() => {
+    setFurthest((f) => Math.max(f, step));
+  }, [step]);
 
   useEffect(() => {
     fetch('/api/lists').then((r) => (r.ok ? r.json() : [])).then(setLists).catch(() => setLists([]));
@@ -182,6 +189,12 @@ export default function ComposePage() {
         setError('Pick a letter first.');
         return;
       }
+      // Same letter, same people as last time: keep any changes she made.
+      const key = `${template.id}:${withEmail.map((r) => r.assignmentId).join(',')}`;
+      if (key === lettersKey && letters.length > 0) {
+        enterCheck();
+        return;
+      }
       setWorking(true);
       try {
         const res = await fetch(`/api/templates/${template.id}/preview`, {
@@ -200,6 +213,7 @@ export default function ComposePage() {
           return;
         }
         setLetters(data.results);
+        setLettersKey(key);
         setSubject((s) => s || template.file_name.replace(/\.docx$/i, ''));
         enterCheck();
       } catch {
@@ -266,10 +280,18 @@ export default function ComposePage() {
     setConfirming(false);
   }
 
+  // Jump to a step from the buttons at the top. Everything chosen and typed
+  // so far is kept; step 1 reopens the way it was left (the ticked people,
+  // or the chosen list). Going forward to step 3 re-checks the email first.
   function goToStep(n) {
     setError('');
     setConfirming(false);
-    if (n === 1) setPicking(false);
+    if (n === 3) {
+      goToCheck();
+      return;
+    }
+    if (n === 2 && withEmail.length === 0) return;
+    if (n === 1) setPicking(source?.kind === 'people');
     setStep(n);
   }
 
@@ -291,7 +313,9 @@ export default function ComposePage() {
       </div>
       <ol className="signal-steps" aria-label="Steps">
         {STEPS.map((label, i) => {
-          const done = step > i + 1;
+          const n = i + 1;
+          const done = step > n;
+          const canJump = n !== step && n <= furthest && !result && !sending && (n === 1 || recipients.length > 0);
           const inner = (
             <>
               <span className="signal-step-num">{done ? '✓' : i + 1}</span>
@@ -300,9 +324,9 @@ export default function ComposePage() {
           );
           return (
             <li key={label} className={`signal-step${step === i + 1 ? ' current' : ''}${done ? ' done' : ''}`} aria-current={step === i + 1 ? 'step' : undefined}>
-              {/* Finished steps are buttons: click one to go back and change it. */}
-              {done && !result && !sending ? (
-                <button type="button" className="signal-step-btn" onClick={() => goToStep(i + 1)} title={`Go back to ${label}`}>
+              {/* Steps already reached are buttons: click one to go there. */}
+              {canJump ? (
+                <button type="button" className="signal-step-btn" onClick={() => goToStep(n)} title={`Go to ${label}`}>
                   {inner}
                 </button>
               ) : (
@@ -321,11 +345,25 @@ export default function ComposePage() {
       {step === 1 && !picking && (
         <section aria-labelledby="who-title">
           <h2 id="who-title" className="signal-wizard-question">Who are you writing to?</h2>
+          {source && withEmail.length > 0 && (
+            <div className="signal-who-summary">
+              <span>
+                <span className="signal-who-label">Right now</span>
+                <strong>{source.kind === 'list' ? `“${source.list.name}”` : 'people you picked'}</strong> · {withEmail.length} {withEmail.length === 1 ? 'person' : 'people'}
+              </span>
+              <button type="button" className="signal-btn-primary signal-btn-small" onClick={() => setStep(2)}>Keep and go on →</button>
+            </div>
+          )}
           {lists === null && <p className="signal-home-empty">Loading…</p>}
           {lists && (
             <div className="signal-choice-cards">
               {lists.map((l) => (
-                <button key={l.id} type="button" className="signal-choice-card" onClick={() => chooseList(l)}>
+                <button
+                  key={l.id}
+                  type="button"
+                  className={`signal-choice-card${source?.kind === 'list' && Number(source.list.id) === Number(l.id) ? ' selected' : ''}`}
+                  onClick={() => chooseList(l)}
+                >
                   <span className="signal-choice-icon" aria-hidden="true">☰</span>
                   <span className="signal-choice-text">
                     <span className="signal-choice-title">{l.name}</span>
@@ -352,7 +390,13 @@ export default function ComposePage() {
         </section>
       )}
 
-      {step === 1 && picking && <PeoplePicker onBack={() => setPicking(false)} onDone={choosePeople} />}
+      {step === 1 && picking && (
+        <PeoplePicker
+          initial={source?.kind === 'people' ? recipients.map((r) => r.teacherId) : []}
+          onBack={() => setPicking(false)}
+          onDone={choosePeople}
+        />
+      )}
 
       {/* ---------- Step 2: What ---------- */}
       {step === 2 && (
@@ -732,9 +776,9 @@ function WhoSummary({ source, withEmail, withoutEmail, onChange }) {
   );
 }
 
-function PeoplePicker({ onBack, onDone }) {
+function PeoplePicker({ initial = [], onBack, onDone }) {
   const [people, setPeople] = useState(null);
-  const [selected, setSelected] = useState(new Set());
+  const [selected, setSelected] = useState(() => new Set(initial));
   const [search, setSearch] = useState('');
 
   useEffect(() => {
