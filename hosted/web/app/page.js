@@ -48,7 +48,7 @@ export default function HomePage() {
         <span className="signal-home-write-icon" aria-hidden="true">✉</span>
         <span>
           <span className="signal-home-write-title">Write an email</span>
-          <span className="signal-home-write-sub">Pick who, pick what to send, and it opens in Gmail</span>
+          <span className="signal-home-write-sub">Pick who, write it, and send it from your Gmail</span>
         </span>
         <span className="signal-home-write-arrow" aria-hidden="true">→</span>
       </a>
@@ -67,7 +67,7 @@ export default function HomePage() {
 
       <section className="signal-home-section" aria-labelledby="home-recent">
         <h2 id="home-recent" className="signal-home-section-title">
-          Recently sent <HelpBubble text="Emails you opened from Signal in this workspace, newest first. The full history is on the Calendar page under More." />
+          Recently sent <HelpBubble text="Emails you sent from Signal in this workspace, newest first. The full history is on the Calendar page under More." />
         </h2>
         {recentSends.length === 0 ? (
           <p className="signal-home-empty">Nothing sent from this workspace yet. When you write an email, it will show up here.</p>

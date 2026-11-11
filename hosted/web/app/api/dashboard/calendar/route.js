@@ -13,7 +13,7 @@ export async function GET() {
     const workspace = await getCurrentWorkspace(client, userId);
 
     const { rows: sends } = await client.query(
-      `select sr.id, sr.generated_at, sr.opened_at, sr.status, sr.recipient_field,
+      `select sr.id, sr.generated_at, sr.opened_at, sr.status, sr.recipient_field, sr.sent_from,
               t.id as teacher_id, t.first_name, t.last_name,
               ta.school, ta.subject, ta.level, ta.district, ta.email,
               tmpl.file_name as template_name,

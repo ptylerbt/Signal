@@ -2574,3 +2574,129 @@ html[data-contrast="high"] .signal-modal {
 .signal-connect-have {
   margin-top: 28px;
 }
+
+/* Write Email, step 3: send from Signal */
+.signal-send-section {
+  margin-bottom: 24px;
+}
+.signal-send-label {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  color: #1F3864;
+}
+.signal-send-hint {
+  font-weight: 400;
+  font-size: 0.95rem;
+  color: #666;
+}
+.signal-from-choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.signal-from-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 20px;
+  border: 2px solid #dde3ef;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: #1F3864;
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.signal-from-choice.selected {
+  border-color: #1F3864;
+  background: #eef2fa;
+  box-shadow: 0 0 0 2px #1F3864;
+}
+.signal-from-dot {
+  font-size: 1.2rem;
+}
+.signal-send-box {
+  padding: 22px;
+  margin: 8px 0 20px;
+  border: 3px solid #1F3864;
+  border-radius: var(--radius-2xl);
+  background: #fff;
+}
+.signal-send-summary {
+  margin: 0 0 16px;
+  font-size: 1.2rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.signal-send-btn {
+  font-size: 1.25rem;
+  min-height: 64px;
+  padding: 16px 36px;
+}
+.signal-send-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.signal-send-test {
+  display: block;
+  margin-top: 14px;
+}
+.signal-send-confirm-text {
+  margin: 0 0 14px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #a11e23;
+}
+.signal-attach {
+  margin-top: 16px;
+}
+.signal-attach-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+.signal-attach-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  margin-bottom: 6px;
+  border: 1px solid #dde3ef;
+  border-radius: var(--radius-md);
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+.signal-attach-btn {
+  display: inline-flex;
+  align-items: center;
+}
+.signal-attach-btn:focus-within {
+  outline: 3px solid #1F3864;
+  outline-offset: 2px;
+}
+.signal-noaccount {
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  border: 3px solid #c9a227;
+  border-radius: var(--radius-md);
+  background: #fff9e6;
+  font-size: 1.05rem;
+}
+.signal-noaccount p {
+  margin: 0 0 12px;
+}
+.signal-noaccount-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1F3864;
+}
+.signal-letter-card summary {
+  cursor: pointer;
+  padding: 6px 0;
+}

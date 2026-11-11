@@ -49,7 +49,8 @@ export default function DetailOverlay({ item, onClose }) {
               {item.subject && <Row label="Subject" value={item.subject} />}
               {item.level && <Row label="Level" value={item.level} />}
               {item.district && <Row label="District" value={item.district} />}
-              <Row label="Status" value="Opened in your email app" />
+              {item.sent_from && <Row label="Sent from" value={item.sent_from} />}
+              <Row label="Status" value={item.status === 'sent' ? 'Sent from Signal' : 'Opened in your email app'} />
             </>
           )}
           {item.kind === 'status' && (
