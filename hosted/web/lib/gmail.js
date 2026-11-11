@@ -84,7 +84,7 @@ export async function exchangeCode({ code, origin }) {
 
 // Tells Google to forget the permission, so removing an account in Signal
 // really disconnects it. Best effort: a failure here must not block removal.
-async function revokeToken(refreshToken) {
+export async function revokeToken(refreshToken) {
   try {
     await fetch('https://oauth2.googleapis.com/revoke', {
       method: 'POST',
