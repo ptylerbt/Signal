@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { cardStyle, titleStyle, subtitleStyle, inputStyle, primaryBtnStyle, chipBlueStyle } from '../components/ui.js';
+import GmailAccounts from '../components/GmailAccounts.js';
 
 export default function SettingsPage() {
   const [loaded, setLoaded] = useState(false);
@@ -38,9 +39,7 @@ export default function SettingsPage() {
     load();
   }, []);
 
-  // Live-preview accessibility changes immediately, before saving.
-  useEffect(() => {
-    // Saved immediately; the page reloads so the sidebar shows/hides the tools.
+  // Saved immediately; the page reloads so the sidebar shows/hides the tools.
   async function toggleAdvanced(next) {
     setShowAdvanced(next);
     await fetch('/api/settings', {
@@ -60,7 +59,9 @@ export default function SettingsPage() {
     window.location.href = '/';
   }
 
-  if (!loaded) return;
+  // Live-preview accessibility changes immediately, before saving.
+  useEffect(() => {
+    if (!loaded) return;
     document.documentElement.style.fontSize = `${16 * fontScale}px`;
   }, [fontScale, loaded]);
 
@@ -135,6 +136,14 @@ export default function SettingsPage() {
         <p style={{ fontSize: 14, color: '#888', marginTop: 12, marginBottom: 0 }}>
           Manage your sign-in details from the account menu in the top-right corner.
         </p>
+      </div>
+
+      <div style={cardStyle} id="gmail">
+        <h2 style={titleStyle}>✉ Gmail accounts</h2>
+        <p style={{ fontSize: 15, color: '#666', marginTop: 0 }}>
+          Signal sends your emails from these Gmail accounts. You pick which one each time you write an email.
+        </p>
+        <GmailAccounts from="settings" />
       </div>
 
       <div style={cardStyle}>
