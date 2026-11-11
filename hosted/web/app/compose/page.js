@@ -292,7 +292,7 @@ export default function ComposePage() {
       </ol>
 
       <GmailResult result={gmailResult} />
-      {noAccounts && step === 1 && <NoAccountBox onAdd={addAccount} />}
+      {noAccounts && step === 1 && !picking && <NoAccountBox onAdd={addAccount} />}
       {error && <p className="signal-modal-error" role="alert" style={{ marginBottom: 16 }}>{error}</p>}
 
       {/* ---------- Step 1: Who ---------- */}
@@ -424,6 +424,8 @@ export default function ComposePage() {
             <HelpBubble text="You can still change anything on this page. Nothing is sent until you press the big Send button." />
           </h2>
 
+          <div className="signal-split">
+          <div className="signal-split-col">
           {/* From */}
           <div className="signal-send-section">
             <h3 className="signal-send-label">Send from</h3>
@@ -485,6 +487,8 @@ export default function ComposePage() {
             </div>
           )}
 
+          </div>
+          <div className="signal-split-col">
           {/* How (messages only) */}
           {mode === 'message' && withEmail.length > 1 && (
             <div className="signal-send-section">
@@ -566,6 +570,8 @@ export default function ComposePage() {
           <div className="signal-wizard-nav">
             <button type="button" className="signal-btn-ghost" onClick={() => setStep(2)} disabled={!!sending}>← Back</button>
           </div>
+          </div>
+          </div>
         </section>
       )}
     </div>
@@ -578,7 +584,7 @@ function MessageFields({ subject, setSubject, body, setBody, signature }) {
       <label className="signal-field-label" htmlFor="c-subject">Subject</label>
       <input id="c-subject" className="signal-big-input" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Rehearsal moved to Thursday" />
       <label className="signal-field-label" htmlFor="c-body">Message</label>
-      <textarea id="c-body" className="signal-notes-input signal-message-input" rows={8} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Type your message…" />
+      <textarea id="c-body" className="signal-notes-input signal-message-input" rows={6} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Type your message…" />
       {signature && <p className="signal-home-sub">Your signature from Settings will be added at the end.</p>}
     </>
   );

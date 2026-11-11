@@ -171,6 +171,8 @@ export default function PersonPage({ params }) {
         {message && <p className="signal-inline-message" role="status">{message}</p>}
       </header>
 
+<div className="signal-split">
+      <div className="signal-split-col">
       <section className="signal-home-section" aria-labelledby="details-title">
         <h2 id="details-title" className="signal-home-section-title">
           Contact details <HelpBubble text="Their email and what they do. If someone has two jobs or two emails, add another box for each." />
@@ -244,6 +246,8 @@ export default function PersonPage({ params }) {
         )}
       </section>
 
+      </div>
+      <div className="signal-split-col">
       <section className="signal-home-section" aria-labelledby="pnotes-title">
         <h2 id="pnotes-title" className="signal-home-section-title">Notes about {person.first_name || 'them'}</h2>
         <div className="signal-notes-box">
@@ -293,6 +297,8 @@ export default function PersonPage({ params }) {
             : `They'll go to Trash, where you can get them back. You can also Undo right after.`}
         </p>
       </section>
+      </div>
+      </div>
 
       {undo.bar}
     </div>

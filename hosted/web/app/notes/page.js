@@ -80,6 +80,8 @@ export default function NotesPage() {
         <p className="signal-home-sub">Notes for this workspace. You can also write notes on Home, on a list, or on someone’s page.</p>
       </header>
 
+<div className="signal-split">
+      <div className="signal-split-col">
       <section className="signal-home-section">
         <div className="signal-notes-box">
           <label htmlFor="notes-new" className="signal-visually-hidden">Write a note</label>
@@ -126,6 +128,8 @@ export default function NotesPage() {
         </div>
       </section>
 
+      </div>
+      <div className="signal-split-col">
       <section className="signal-home-section" aria-labelledby="all-notes">
         <h2 id="all-notes" className="signal-home-section-title">All notes{notes ? ` (${notes.length})` : ''}</h2>
         {notes === null && <p className="signal-home-empty">Loading…</p>}
@@ -148,6 +152,8 @@ export default function NotesPage() {
           </ul>
         )}
       </section>
+      </div>
+      </div>
 
       <DetailOverlay item={detailItem} onClose={() => setDetailItem(null)} />
       {undo.bar}

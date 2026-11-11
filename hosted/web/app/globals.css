@@ -2212,10 +2212,10 @@ html[data-contrast="high"] .signal-content .signal-help-pop {
   border-radius: var(--radius-sm);
 }
 
-/* ---------- Short windows (laptops with display scaling) ----------
+/* ---------- Shorter windows (most laptops and desktops) ----------
    Same sizes for text and buttons; just less empty space above and below
    things, so more of each page fits without zooming out. */
-@media (max-height: 820px) {
+@media (max-height: 1100px) {
   .signal-sidebar {
     padding: 12px 0;
   }
@@ -2699,4 +2699,98 @@ html[data-contrast="high"] .signal-modal {
 .signal-letter-card summary {
   cursor: pointer;
   padding: 6px 0;
+}
+
+/* ---------- Wide screens: use the width so pages fit without scrolling ----------
+   Same text and button sizes; things sit side by side instead of stacked. */
+.signal-settings-grid {
+  max-width: 720px;
+}
+@media (min-width: 1100px) {
+  .signal-home,
+  .signal-wizard {
+    max-width: 1400px;
+  }
+  .signal-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  /* Long lists of people show two or three across. */
+  .signal-people-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr));
+  }
+  /* Write Email step 1: lists two across. */
+  .signal-wizard .signal-choice-cards:not(.signal-choice-two) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .signal-settings-grid {
+    max-width: 1400px;
+    columns: 2;
+    column-gap: 20px;
+  }
+  .signal-settings-grid > div {
+    break-inside: avoid;
+  }
+  .signal-home-header {
+    margin-bottom: 14px;
+  }
+}
+
+/* ---------- Home on a wide screen: two columns, one screen ----------
+   Left: Write an email + lists. Right: notes + recently sent. */
+@media (min-width: 1100px) {
+  .signal-home-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  .signal-home-cols .signal-list-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .signal-home-cols .signal-list-card {
+    min-height: 104px;
+  }
+  .signal-home-cols .signal-notes-input {
+    min-height: 72px;
+  }
+  .signal-home-cols .signal-recent-row {
+    padding: 12px 18px;
+  }
+  .signal-home-dash .signal-home-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 20px;
+  }
+}
+@media (min-width: 1100px) {
+  .signal-people-list .signal-person-row {
+    min-height: 60px;
+    padding: 8px 14px;
+  }
+}
+@media (min-width: 1100px) and (max-height: 1100px) {
+  .signal-content {
+    padding-bottom: 12px;
+  }
+  .signal-steps {
+    margin: 8px 0 12px;
+  }
+  .signal-wizard-question {
+    margin-bottom: 12px;
+  }
+}
+@media (min-width: 1100px) {
+  .signal-pick-list.signal-pick-list-page {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr));
+    align-content: start;
+    /* Tall enough to fill the screen while the Next button stays in view. */
+    max-height: max(260px, calc(100vh - 510px));
+  }
 }

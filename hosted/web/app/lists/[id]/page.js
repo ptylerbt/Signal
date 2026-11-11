@@ -172,6 +172,8 @@ export default function ListPage({ params }) {
         <button type="button" className="signal-btn-ghost" onClick={() => setAddingNew(true)}>+ Add a new person</button>
       </div>
 
+<div className="signal-split">
+      <div className="signal-split-col">
       <section className="signal-home-section" aria-labelledby="members-title">
         <div className="signal-home-section-head">
           <h2 id="members-title" className="signal-home-section-title">
@@ -229,6 +231,8 @@ export default function ListPage({ params }) {
         )}
       </section>
 
+      </div>
+      <div className="signal-split-col">
       <section className="signal-home-section" aria-labelledby="lnotes-title">
         <h2 id="lnotes-title" className="signal-home-section-title">Notes for this list</h2>
         <div className="signal-notes-box">
@@ -254,6 +258,8 @@ export default function ListPage({ params }) {
         <button type="button" className="signal-btn-danger" onClick={trashList}>Delete this list</button>
         <p className="signal-home-sub">The people stay in People. The list goes to Trash, and you can Undo right after.</p>
       </section>
+      </div>
+      </div>
 
       {picking && (
         <PickPeopleModal

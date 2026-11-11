@@ -84,7 +84,7 @@ export default function SettingsPage() {
   if (!loaded) return <p style={{ fontSize: 15, color: '#666' }}>Loading...</p>;
 
   return (
-    <div style={{ maxWidth: 720 }}>
+    <div className="signal-settings-grid">
       <div style={cardStyle}>
         <h2 style={titleStyle}>Accessibility</h2>
         <p style={{ fontSize: 15, color: '#666', marginTop: 0 }}>

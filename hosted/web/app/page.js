@@ -5,9 +5,12 @@ import ListsGrid from './components/ListsGrid.js';
 import DetailOverlay from './components/DetailOverlay.js';
 import HelpBubble from './components/HelpBubble.js';
 
-// Home: one big "Write an email" action, this workspace's lists, and what
-// was sent recently. Deliberately short — the calendar and notes live
-// under "More".
+// Home: one big "Write an email" action, this workspace's lists, notes,
+// and what was sent recently. On a wide screen these sit in two columns so
+// the whole page fits without scrolling; on a narrow one they stack.
+// Lists shown on Home (plus the New List card), so the page stays one screen.
+const HOME_LISTS = 3;
+
 export default function HomePage() {
   const [data, setData] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -33,7 +36,7 @@ export default function HomePage() {
   const { workspace, lists, recentSends, notes } = data;
 
   return (
-    <div className="signal-home">
+    <div className="signal-home signal-home-dash">
       <header className="signal-home-header">
         <h1 className="signal-home-title">
           <span aria-hidden="true">{workspace.emoji || '📁'}</span> {workspace.name}
@@ -44,6 +47,8 @@ export default function HomePage() {
         </p>
       </header>
 
+      <div className="signal-home-cols">
+      <div className="signal-home-col">
       <a href="/compose" className="signal-home-write">
         <span className="signal-home-write-icon" aria-hidden="true">✉</span>
         <span>
@@ -58,12 +63,15 @@ export default function HomePage() {
           <h2 id="home-lists" className="signal-home-section-title">
             Your lists <HelpBubble text="A list is a group of people you email together, like Choir Members. Click one to add people or email them." />
           </h2>
-          {lists.length > 5 && <a href="/lists" className="signal-home-link">See all {lists.length} →</a>}
+          {lists.length > HOME_LISTS && <a href="/lists" className="signal-home-link">See all {lists.length} →</a>}
         </div>
-        <ListsGrid lists={lists} limit={5} onCreated={load} />
+        <ListsGrid lists={lists} limit={HOME_LISTS} onCreated={load} />
       </section>
+      </div>
 
-      <NotesBox notes={notes} onSaved={load} onOpen={setDetailItem} />
+      <div className="signal-home-col">
+
+      <NotesBox notes={notes.slice(0, 3)} onSaved={load} onOpen={setDetailItem} />
 
       <section className="signal-home-section" aria-labelledby="home-recent">
         <h2 id="home-recent" className="signal-home-section-title">
@@ -73,7 +81,7 @@ export default function HomePage() {
           <p className="signal-home-empty">Nothing sent from this workspace yet. When you write an email, it will show up here.</p>
         ) : (
           <ul className="signal-recent-list">
-            {recentSends.map((s) => (
+            {recentSends.slice(0, 4).map((s) => (
               <li key={s.id} className="signal-recent-row">
                 <span className="signal-recent-who">
                   {[s.first_name, s.last_name].filter(Boolean).join(' ') || s.email || 'Someone'}
@@ -88,6 +96,8 @@ export default function HomePage() {
           </ul>
         )}
       </section>
+      </div>
+      </div>
 
       <DetailOverlay item={detailItem} onClose={() => setDetailItem(null)} />
     </div>
@@ -138,7 +148,7 @@ function NotesBox({ notes, onSaved, onOpen }) {
         <textarea
           id="home-note"
           className="signal-notes-input"
-          rows={3}
+          rows={2}
           placeholder="Write a note… (for example: “Call Mrs. Lee back about the concert”)"
           value={text}
           onChange={(e) => {
