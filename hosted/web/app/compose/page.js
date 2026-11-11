@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import HelpBubble from '../components/HelpBubble.js';
+import Modal from '../components/Modal.js';
 import { useGmailResult, GmailResult } from '../components/GmailAccounts.js';
 
 // Write Email, as a 3-step wizard: Who → What → Check & send.
@@ -33,6 +34,7 @@ export default function ComposePage() {
 
   // What
   const [mode, setMode] = useState(null); // 'message' | 'letter'
+  const [editing, setEditing] = useState(false); // the writing window is open
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [attachments, setAttachments] = useState([]); // [{ name, type, size, data }]
@@ -151,9 +153,11 @@ export default function ComposePage() {
     setStep(2);
   }
 
+  // Picking "Write a message" or "Use a saved letter" opens the writing window.
   async function chooseMode(next) {
     setMode(next);
     setError('');
+    setEditing(true);
     if (next === 'letter' && templates === null) {
       try {
         const res = await fetch('/api/templates');
@@ -165,6 +169,7 @@ export default function ComposePage() {
   }
 
   function enterCheck() {
+    setEditing(false);
     setConfirming(false);
     setTestResult(null);
     setStep(3);
@@ -304,6 +309,8 @@ export default function ComposePage() {
   }
 
   const noAccounts = gmail && !gmail.failed && gmail.accounts.length === 0;
+  const hasDraft =
+    (mode === 'message' && (subject.trim() || body.trim() || attachments.length > 0)) || (mode === 'letter' && !!template);
 
   return (
     <div className="signal-home signal-wizard">
@@ -401,7 +408,7 @@ export default function ComposePage() {
       {/* ---------- Step 2: What ---------- */}
       {step === 2 && (
         <section aria-labelledby="what-title">
-          <WhoSummary source={source} withEmail={withEmail} withoutEmail={withoutEmail} onChange={() => setStep(1)} />
+          <WhoSummary source={source} withEmail={withEmail} withoutEmail={withoutEmail} onChange={() => goToStep(1)} />
 
           <h2 id="what-title" className="signal-wizard-question">
             What do you want to send?{' '}
@@ -424,57 +431,101 @@ export default function ComposePage() {
             </button>
           </div>
 
-          {mode === 'message' && (
-            <div className="signal-wizard-panel">
-              <MessageFields subject={subject} setSubject={setSubject} body={body} setBody={setBody} signature={signature} />
-              <Attachments files={attachments} onChange={setAttachments} />
-            </div>
-          )}
-
-          {mode === 'letter' && (
-            <div className="signal-wizard-panel">
-              {templates === null && <p className="signal-home-sub">Loading your letters…</p>}
-              {templates && templates.length === 0 && (
-                <p className="signal-home-empty">
-                  You don’t have any saved letters yet. Add one on the <a href="/templates">Letters</a> page (under More), or choose “Write a message” instead.
-                </p>
+          {/* What she has so far, as a clean read-only card. Edit reopens the window. */}
+          {hasDraft && (
+            <div className="signal-draft">
+              <div className="signal-draft-head">
+                <span className="signal-draft-kicker">{mode === 'letter' ? 'Your letter' : 'Your message'}</span>
+                <button type="button" className="signal-btn-ghost signal-btn-small" onClick={() => setEditing(true)}>✎ Edit</button>
+              </div>
+              {mode === 'message' ? (
+                <>
+                  <p className="signal-draft-subject">{subject || '(no subject)'}</p>
+                  <p className="signal-draft-body">{body || '(no message yet)'}</p>
+                </>
+              ) : (
+                <p className="signal-draft-subject">📄 {template.file_name.replace(/\.docx$/i, '')}</p>
               )}
-              {templates && templates.length > 0 && (
-                <div className="signal-choice-cards">
-                  {templates.map((t) => {
-                    const needsSetup = t.unmapped_count > 0;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        className={`signal-choice-card${template?.id === t.id ? ' selected' : ''}${needsSetup ? ' disabled' : ''}`}
-                        onClick={() => !needsSetup && setTemplate(t)}
-                        aria-pressed={template?.id === t.id}
-                        aria-disabled={needsSetup}
-                      >
-                        <span className="signal-choice-icon" aria-hidden="true">📄</span>
-                        <span className="signal-choice-text">
-                          <span className="signal-choice-title">{t.file_name.replace(/\.docx$/i, '')}</span>
-                          <span className="signal-choice-sub">
-                            {needsSetup ? 'Needs setting up on the Letters page first' : `Fills in ${(t.detected_labels_json || []).map((l) => `[${l}]`).join(' ') || 'nothing — same for everyone'}`}
-                          </span>
-                        </span>
-                        {template?.id === t.id && <span className="signal-choice-arrow" aria-label="Selected">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
+              {attachments.length > 0 && (
+                <p className="signal-draft-files">{attachments.map((f) => `📎 ${f.name}`).join('   ')}</p>
               )}
-              {template && <Attachments files={attachments} onChange={setAttachments} />}
             </div>
           )}
 
           <div className="signal-wizard-nav">
-            <button type="button" className="signal-btn-ghost" onClick={() => setStep(1)}>← Back</button>
-            <button type="button" className="signal-btn-primary signal-btn-next" onClick={goToCheck} disabled={!mode || working}>
-              {working ? 'Getting letters ready…' : 'Next: check it →'}
-            </button>
+            <button type="button" className="signal-btn-ghost" onClick={() => goToStep(1)}>← Back</button>
+            {hasDraft && (
+              <button type="button" className="signal-btn-primary signal-btn-next" onClick={goToCheck} disabled={working}>
+                {working ? 'Getting letters ready…' : 'Next: check it →'}
+              </button>
+            )}
           </div>
+
+          {/* The writing happens in a window over the page. */}
+          {editing && mode && (
+            <Modal onClose={() => setEditing(false)} labelledBy="edit-title" className="signal-modal signal-modal-compose">
+              <h2 id="edit-title" className="signal-modal-title">
+                {mode === 'message' ? '✎ Write a message' : '📄 Choose a saved letter'}
+              </h2>
+              <p className="signal-modal-help">
+                To: {source?.kind === 'list' ? `“${source.list.name}” · ` : ''}{withEmail.length} {withEmail.length === 1 ? 'person' : 'people'}
+              </p>
+
+              {mode === 'message' && (
+                <>
+                  <MessageFields subject={subject} setSubject={setSubject} body={body} setBody={setBody} signature={signature} />
+                  <Attachments files={attachments} onChange={setAttachments} />
+                </>
+              )}
+
+              {mode === 'letter' && (
+                <>
+                  {templates === null && <p className="signal-home-sub">Loading your letters…</p>}
+                  {templates && templates.length === 0 && (
+                    <p className="signal-home-empty">
+                      You don’t have any saved letters yet. Add one on the <a href="/templates">Letters</a> page (under More), or choose “Write a message” instead.
+                    </p>
+                  )}
+                  {templates && templates.length > 0 && (
+                    <div className="signal-choice-cards signal-modal-letters">
+                      {templates.map((t) => {
+                        const needsSetup = t.unmapped_count > 0;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            className={`signal-choice-card${template?.id === t.id ? ' selected' : ''}${needsSetup ? ' disabled' : ''}`}
+                            onClick={() => !needsSetup && setTemplate(t)}
+                            aria-pressed={template?.id === t.id}
+                            aria-disabled={needsSetup}
+                          >
+                            <span className="signal-choice-icon" aria-hidden="true">📄</span>
+                            <span className="signal-choice-text">
+                              <span className="signal-choice-title">{t.file_name.replace(/\.docx$/i, '')}</span>
+                              <span className="signal-choice-sub">
+                                {needsSetup ? 'Needs setting up on the Letters page first' : `Fills in ${(t.detected_labels_json || []).map((l) => `[${l}]`).join(' ') || 'nothing — same for everyone'}`}
+                              </span>
+                            </span>
+                            {template?.id === t.id && <span className="signal-choice-arrow" aria-label="Selected">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {template && <Attachments files={attachments} onChange={setAttachments} />}
+                </>
+              )}
+
+              {error && <p className="signal-modal-error" role="alert">{error}</p>}
+
+              <div className="signal-modal-buttons">
+                <button type="button" className="signal-btn-ghost" onClick={() => setEditing(false)}>Close</button>
+                <button type="button" className="signal-btn-primary" onClick={goToCheck} disabled={working}>
+                  {working ? 'Getting letters ready…' : 'Next: check it →'}
+                </button>
+              </div>
+            </Modal>
+          )}
         </section>
       )}
 
